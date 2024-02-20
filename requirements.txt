@@ -1,0 +1,15 @@
+numpy==1.23.5
+scikit-learn==1.2.0
+streamlit
+folium
+geopandas
+pandas
+streamlit_folium
+beautifulsoup4
+pydantic
+xgboost==1.7.5
+shapely
+plotly==5.13.1
+streamlit-modal
+streamlit-js-eval
+sqlalchemy
