@@ -16,7 +16,7 @@ conn.execute('LOAD postgres;')
 
 # attach the connection
 conn.execute(f"""
-ATTACH 'postgresql://postgres.{os.environ["DB_ID"]}:{os.environ["DB_PASSWORD"]}@aws-0-{os.environ["DB_REGION"]}.pooler.supabase.com:{os.environ["DB_PORT"]}/postgres'' AS db (TYPE postgres);
+ATTACH 'postgresql://postgres.{os.environ["DB_ID"]}:{os.environ["DB_PASSWORD"]}@aws-0-{os.environ["DB_REGION"]}.pooler.supabase.com:{os.environ["DB_PORT"]}/postgres' AS db (TYPE postgres);
 """)
 
 # put the fresh data into the parquet file
