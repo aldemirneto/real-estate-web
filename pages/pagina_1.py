@@ -73,7 +73,7 @@ if Aluguel:
         st.rerun()
 
 
-df = pd.read_parquet('data/lineitem.parquet')
+df = pd.read_parquet('lineitem.parquet')
 
 bairro_options = sorted(df['bairro'].unique())
 # appending the value todos to the bairro_options
