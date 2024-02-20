@@ -1,20 +1,16 @@
 from streamlit.components.v1 import html
-from streamlit_js_eval import streamlit_js_eval
+
 import streamlit as st
 import folium
 import pandas as pd
 import geopandas as gpd
 import time
-from shapely import Point
 from streamlit_folium import st_folium
-from datetime import datetime, timedelta
 import numpy as np
 from streamlit_modal import Modal
+import helpers.page1 as helper
 
 
-def format_brl(amount):
-    formatted_amount = f'{amount:,.2f}'.replace(',', 'x').replace('.', ',').replace('x', '.')
-    return formatted_amount
 
 
 st.sidebar.markdown("""
@@ -76,7 +72,7 @@ if Aluguel:
             st.session_state['page'] = 1
         st.rerun()
 
-df = pd.read_csv('imovel.csv', sep=';')
+df = pd.read_parquet('./data/lineitem.parquet')
 
 bairro_options = sorted(df['bairro'].unique())
 # appending the value todos to the bairro_options
@@ -171,17 +167,11 @@ if modal_geo.is_open():
         map = st_folium(m, height=300, width=600, feature_group_to_add=feature_group)
 
 
-        def get_pos(lat, lng):
-            for i in range(len(df_m)):
-                if Point(lng, lat).within(df_m.loc[i, 'geometry']):
-                    return df_m.loc[i, 'Name']
-
-            return None
 
 
         data = None
         if map.get("last_clicked"):
-            data = get_pos(map["last_clicked"]["lat"], map["last_clicked"]["lng"])
+            data = helper.get_pos(map["last_clicked"]["lat"], map["last_clicked"]["lng"], df_m)
 
         if data:
             if st.button(f"esse é o bairro {data.replace('_', ' ')}, quer continuar?"):
@@ -248,20 +238,10 @@ if pesquisa:
     st.session_state['page'] = 1
 # write all the st.session_state variables to a dictionary
 if 'bairro' in st.session_state and 'preco' in st.session_state:
-    def cor_sinc(df):
-        ultima_data_scrape = df['data_scrape'].max()
-        ultima_data_scrape = datetime.strptime(ultima_data_scrape, '%Y-%m-%d').date()
-        today = datetime.today().date()
-        diff = today - ultima_data_scrape
-        if diff <= timedelta(days=1):
-            return '#a8d8b9'  # green
-        elif diff <= timedelta(days=3):
-            return '#f3d38c'  # yellow
-        else:
-            return '#f9b4ab'  # red
 
 
-    bg = cor_sinc(df)
+
+    bg = helper.cor_sinc(df)
     st.markdown(f"""<div style= 'background-color: rgba({int(bg[1:3], 16)}, {int(bg[3:5], 16)}, {int(bg[5:7], 16)}, 0.3);
                                 backdrop-filter: blur(10px);
                                 box-shadow: 0 8px 32px 0 rgba({int(bg[1:3], 16)}, {int(bg[3:5], 16)}, {int(bg[5:7], 16)}, 0);
@@ -321,7 +301,7 @@ if 'bairro' in st.session_state and 'preco' in st.session_state:
             resultados_sem_data_scrape = resultados_sem_data_scrape[
                 ['imobiliaria', 'preco', 'area', 'quartos', 'banheiros', 'vagas', 'link']]
 
-        resultados_sem_data_scrape['preco'] = resultados_sem_data_scrape['preco'].apply(lambda x: format_brl(x))
+        resultados_sem_data_scrape['preco'] = resultados_sem_data_scrape['preco'].apply(lambda x: helper.format_brl(x))
 
         table_style = """
         <style>
