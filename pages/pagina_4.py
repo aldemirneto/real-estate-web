@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 # Read the dataset
-data = pd.read_csv('imoveis.csv', sep=';')
+data = pd.read_parquet('lineitem.parquet')
 
 
 def treated_chart(data):
