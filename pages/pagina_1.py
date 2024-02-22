@@ -568,10 +568,6 @@ if modal_alerta.is_open():
             dados = st.session_state.to_dict()
             # nao pegar chaves que tenham 'key' e 'page' no nome
             dados = {k: v for k, v in dados.items() if 'key' not in k and 'page' not in k}
-            st.write(dados)
-            # st.toast(helper.insert_email(email, dados), icon='🎉')
-            # transform the dict into a json
             dados = json.dumps(dados)
-            st.write(helper.insert_email(email, dados))
             time.sleep(.8)
             modal_alerta.close()
