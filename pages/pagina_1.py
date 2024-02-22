@@ -524,54 +524,54 @@ if pesquisa:
     
                     """, width=0, height=0)
 
-        modal_alerta = Modal("Criar Alerta", key="modal_alerta_key")
+modal_alerta = Modal("Criar Alerta", key="modal_alerta_key")
 
-        # Botão para abrir o modal
-        btn_criar_alerta = st.button(
-            "Deseja ser notificado quando novos imóveis correspondentes aos critérios acima estiverem disponíveis?")
-        if btn_criar_alerta:
-            modal_alerta.open()
+# Botão para abrir o modal
+btn_criar_alerta = st.button(
+    "Deseja ser notificado quando novos imóveis correspondentes aos critérios acima estiverem disponíveis?")
+if btn_criar_alerta:
+    modal_alerta.open()
 
-        st.markdown(
-            f"""
-                            <style>
-                            div[data-modal-container='true'][key='{modal_alerta.key}'] {{
-                                width: calc(100vw - 300px) !important;  <!-- Ajusta a largura -->
-                                left: 300px !important; <!-- Posiciona o modal após a barra lateral -->
-                            }}
+st.markdown(
+    f"""
+                    <style>
+                    div[data-modal-container='true'][key='{modal_alerta.key}'] {{
+                        width: calc(100vw - 300px) !important;  <!-- Ajusta a largura -->
+                        left: 300px !important; <!-- Posiciona o modal após a barra lateral -->
+                    }}
 
-                            div[data-modal-container='true'][key='{modal_alerta.key}'] > div:first-child > div:first-child {{
-                                background-color: black !important;  <!-- Cor de fundo do modal em preto -->
-                                color: #eee !important;  <!-- Cor do texto do modal em modo escuro -->
-                            }}
+                    div[data-modal-container='true'][key='{modal_alerta.key}'] > div:first-child > div:first-child {{
+                        background-color: black !important;  <!-- Cor de fundo do modal em preto -->
+                        color: #eee !important;  <!-- Cor do texto do modal em modo escuro -->
+                    }}
 
-                            div[data-modal-container='true'][key='{modal_alerta.key}']::before {{
-                                background-color: rgba(0, 0, 0, 0.5) !important;  <!-- Cor do fundo semi-transparente em preto -->
-                            }}
-                            </style>
-                            """,
-            unsafe_allow_html=True
-        )
-        # Conteúdo do modal
-        if modal_alerta.is_open():
+                    div[data-modal-container='true'][key='{modal_alerta.key}']::before {{
+                        background-color: rgba(0, 0, 0, 0.5) !important;  <!-- Cor do fundo semi-transparente em preto -->
+                    }}
+                    </style>
+                    """,
+    unsafe_allow_html=True
+)
+# Conteúdo do modal
+if modal_alerta.is_open():
 
-            with modal_alerta.container():
-                st.write(
-                    "Informe seu e-mail para receber notificações sobre novos imóveis que correspondam aos seus critérios de busca.")
+    with modal_alerta.container():
+        st.write(
+            "Informe seu e-mail para receber notificações sobre novos imóveis que correspondam aos seus critérios de busca.")
 
-                # Campo para inserção do e-mail
-                email = st.text_input("Endereço de E-mail")
-                # Botão de confirmação
-                if st.button("Confirmar"):
-                    st.toast('Enviando alerta ')
-                    # Envia o e-mail
-                    dados = st.session_state.to_dict()
-                    # nao pegar chaves que tenham 'key' e 'page' no nome
-                    dados = {k: v for k, v in dados.items() if 'key' not in k and 'page' not in k}
-                    st.write(dados)
-                    # st.toast(helper.insert_email(email, dados), icon='🎉')
-                    # transform the dict into a json
-                    dados = json.dumps(dados)
-                    st.write(helper.insert_email(email, dados))
-                    time.sleep(.8)
-                    modal_alerta.close()
+        # Campo para inserção do e-mail
+        email = st.text_input("Endereço de E-mail")
+        # Botão de confirmação
+        if st.button("Confirmar"):
+            st.toast('Enviando alerta ')
+            # Envia o e-mail
+            dados = st.session_state.to_dict()
+            # nao pegar chaves que tenham 'key' e 'page' no nome
+            dados = {k: v for k, v in dados.items() if 'key' not in k and 'page' not in k}
+            st.write(dados)
+            # st.toast(helper.insert_email(email, dados), icon='🎉')
+            # transform the dict into a json
+            dados = json.dumps(dados)
+            st.write(helper.insert_email(email, dados))
+            time.sleep(.8)
+            modal_alerta.close()
