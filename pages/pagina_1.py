@@ -1,5 +1,5 @@
+import json
 from streamlit.components.v1 import html
-
 import streamlit as st
 import folium
 import pandas as pd
@@ -167,9 +167,6 @@ if modal_geo.is_open():
         # render the map in streamlit smaller
         map = st_folium(m, height=300, width=600, feature_group_to_add=feature_group)
 
-
-
-
         data = None
         if map.get("last_clicked"):
             data = helper.get_pos(map["last_clicked"]["lat"], map["last_clicked"]["lng"], df_m)
@@ -216,16 +213,10 @@ if 'area' not in st.session_state:
 else:
     area = col4.number_input('Área mínima em m2', min_value=0, max_value=1000, value=st.session_state.area, step=10)
 
-# value will be the middle value of the dataframe
-if 'preco' not in st.session_state:
-    preco = st.slider("Preço máximo", min_value=0, max_value=int(df['preco'].max()), value=1000, step=100)
-    st.session_state['preco'] = preco
-else:
-    # the max value will be the max value of the dataframe with the characteristics selected
-    max_value = \
-    df[(df['quartos'] == quartos) & (df['banheiros'] >= banheiros) & (df['vagas'] == vagas) & (df['area'] >= area)][
-        'preco'].max()
-    preco = st.slider("Preço máximo", min_value=0, max_value=int(max_value), value=st.session_state['preco'], step=100)
+
+preco = st.slider("Preço máximo", min_value=0, max_value=int(df['preco'].max()), value=1000, step=100)
+st.session_state['preco'] = preco
+
 
 pesquisa = st.button('Pesquisar', use_container_width=True)
 if pesquisa:
@@ -237,241 +228,301 @@ if pesquisa:
     st.session_state['banheiros'] = banheiros
     # Inicialização do modal
     st.session_state['page'] = 1
-# write all the st.session_state variables to a dictionary
-if 'bairro' in st.session_state and 'preco' in st.session_state:
 
 
+    if 'bairro' in st.session_state and 'preco' in st.session_state:
 
-    bg = helper.cor_sinc(df)
-    st.markdown(f"""<div style= 'background-color: rgba({int(bg[1:3], 16)}, {int(bg[3:5], 16)}, {int(bg[5:7], 16)}, 0.3);
-                                backdrop-filter: blur(10px);
-                                box-shadow: 0 8px 32px 0 rgba({int(bg[1:3], 16)}, {int(bg[3:5], 16)}, {int(bg[5:7], 16)}, 0);
-                                border-radius: 10px;
-                                text-align: center;border-radius: 7px;
-                                padding-left: 12px;
-                                padding-top: 18px;
-                                padding-bottom: 18px;'>"""
-                f"Ultima Atualização: {df['data_scrape'].max()}"
-                "</div>", unsafe_allow_html=True)
-
-    bairro_condition = (df['bairro'] == st.session_state.bairro.replace(' ', '_')) | (
-                st.session_state.bairro == '_Todos')
-
-    # Now apply the rest of the conditions
-    other_conditions = (
-            (df['quartos'] >= st.session_state.quartos) &
-            (df['banheiros'] >= st.session_state.banheiros) &
-            (df['vagas'] >= st.session_state.vagas) &
-            (df['area'] >= st.session_state.area) &
-            (df['preco'] <= st.session_state.preco)
-    )
-
-    # Combine the conditions
-    resultados = df[bairro_condition & other_conditions]
-    if len(resultados) == 0:
-        st.markdown(f"""<div style=' 
-                        background-color: #red;
-                        backdrop-filter: blur(5px); 
-                        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.1); 
-                        border-radius: 10px; 
-                        text-align: center; 
-                        padding: 20px; 
-                        font-size: 1.5em; 
-                        font-family: Arial, sans-serif;'>"""
-                    f"Nenhum resultado encontrado"
+        bg = helper.cor_sinc(df)
+        st.markdown(f"""<div style= 'background-color: rgba({int(bg[1:3], 16)}, {int(bg[3:5], 16)}, {int(bg[5:7], 16)}, 0.3);
+                                    backdrop-filter: blur(10px);
+                                    box-shadow: 0 8px 32px 0 rgba({int(bg[1:3], 16)}, {int(bg[3:5], 16)}, {int(bg[5:7], 16)}, 0);
+                                    border-radius: 10px;
+                                    text-align: center;border-radius: 7px;
+                                    padding-left: 12px;
+                                    padding-top: 18px;
+                                    padding-bottom: 18px;'>"""
+                    f"Ultima Atualização: {df['data_scrape'].max()}"
                     "</div>", unsafe_allow_html=True)
 
-    else:
-        # drop duplicates with the link but keeping the one with the last date on the column 'last-seen'
+        bairro_condition = (df['bairro'] == st.session_state.bairro.replace(' ', '_')) | (
+                    st.session_state.bairro == '_Todos')
 
-        resultados = resultados.drop_duplicates(subset=['link'], keep='last')
+        # Now apply the rest of the conditions
+        other_conditions = (
+                (df['quartos'] >= st.session_state.quartos) &
+                (df['banheiros'] >= st.session_state.banheiros) &
+                (df['vagas'] >= st.session_state.vagas) &
+                (df['area'] >= st.session_state.area) &
+                (df['preco'] <= st.session_state.preco)
+        )
 
-        # if bairro = 'Todos' then show the bairro column
-        if bairro == ' Todos':
+        # Combine the conditions
+        resultados = df[bairro_condition & other_conditions]
 
-            resultados_sem_data_scrape = resultados.drop(['data_scrape', 'last_seen', 'imobiliaria'],
-                                                         axis=1).reset_index(drop=True)
-            # replace the _ for space in the column 'bairro'
-            resultados_sem_data_scrape['bairro'] = resultados_sem_data_scrape['bairro'].str.replace('_', ' ')
-            resultados_sem_data_scrape = resultados_sem_data_scrape[
-                ['bairro', 'preco', 'area', 'quartos', 'banheiros', 'vagas', 'link']]
+        if len(resultados) == 0:
+            st.markdown(f"""<div style=' 
+                            background-color: #red;
+                            backdrop-filter: blur(5px); 
+                            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.1); 
+                            border-radius: 10px; 
+                            text-align: center; 
+                            padding: 20px; 
+                            font-size: 1.5em; 
+                            font-family: Arial, sans-serif;'>"""
+                        f"Nenhum resultado encontrado"
+                        "</div>", unsafe_allow_html=True)
 
         else:
-            resultados_sem_data_scrape = resultados.drop(['data_scrape', 'bairro', 'last_seen'], axis=1).reset_index(
-                drop=True)
-            resultados_sem_data_scrape = resultados_sem_data_scrape[
-                ['imobiliaria', 'preco', 'area', 'quartos', 'banheiros', 'vagas', 'link']]
+            # drop duplicates with the link but keeping the one with the last date on the column 'last-seen'
 
-        resultados_sem_data_scrape['preco'] = resultados_sem_data_scrape['preco'].apply(lambda x: helper.format_brl(x))
+            resultados = resultados.drop_duplicates(subset=['link'], keep='last')
 
-        table_style = """
-        <style>
+            # if bairro = 'Todos' then show the bairro column
+            if bairro == ' Todos':
+                resultados_sem_data_scrape = resultados.drop(['data_scrape', 'last_seen', 'imobiliaria'],
+                                                             axis=1).reset_index(drop=True)
+                # replace the _ for space in the column 'bairro'
+                resultados_sem_data_scrape['bairro'] = resultados_sem_data_scrape['bairro'].str.replace('_', ' ')
+                resultados_sem_data_scrape = resultados_sem_data_scrape[
+                    ['bairro', 'preco', 'area', 'quartos', 'banheiros', 'vagas', 'link']]
 
-            table {{
-                width: 100%;
-                border-collapse: collapse;
-                border: none;
+            else:
+                resultados_sem_data_scrape = resultados.drop(['data_scrape', 'bairro', 'last_seen'], axis=1).reset_index(
+                    drop=True)
+                resultados_sem_data_scrape = resultados_sem_data_scrape[
+                    ['imobiliaria', 'preco', 'area', 'quartos', 'banheiros', 'vagas', 'link']]
 
+            resultados_sem_data_scrape['preco'] = resultados_sem_data_scrape['preco'].apply(lambda x: helper.format_brl(x))
+
+            table_style = """
+            <style>
+    
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    border: none;
+    
+                }}
+                th {{
+    
+                    Font-Weight: Bold;
+                    Border-Bottom: 4px Solid #FAFAFA;  /* Optional: For a Subtle Border Under Headers */
+                    Padding: 10px;  /* Optional: For a Touch of Space Around Text */
+                    text-align: center;
+                }}
+                td {{
+    
+                    Border-Bottom: 4px Solid #ddd; /* Optional: For Subtle Borders Between Table Cells */
+                    Padding: 10px; /* Optional: For a Touch of Space Around Text */
+                    text-align: center;
+                }}
+    
+                tr:hover {{
+                    background-color: #a1a1a1; /* Optional: Hover row color */
+                    cursor: pointer;
+                }}
+                a {{
+                    color: #000000;
+                    text-decoration: none;
+                }}
+    
+            @media (max-width: 500px) {{
+                 td, th, tr {{
+                border:none; !important;
+                border-bottom: none !important; /* Removing the border and ensuring this rule has high specificity */
+                border-top: none !important; /* Removing the top border as well */
+    
             }}
+                td:first-child, th:first-child {{
+                #background-color: #1C8394;
+                    background-color: #1C8394; /* Choose your color */
+                    color: white; /* Text color, choose what suits your background color */
+                    border-radius: 5px; /* Optional: for rounded corners */
+                    padding: 10px; /* Space inside the cell */
+                    text-align: left;
+                }}
+                td {{
+                border-bottom: 0; /* Removing the border */
+                display: block;
+                position: relative;
+                padding-left: 0;
+                padding-right: 30px;
+                text-align: right;
+                font-weight: bold;
+                font-style: roboto;
+                }}
+    
+            td:before {{
+                content: attr(data-title);
+                position: absolute;
+                left: 0;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: right;
+                font-weight: normal;
+            }}
+    
             th {{
-
-                Font-Weight: Bold;
-                Border-Bottom: 4px Solid #FAFAFA;  /* Optional: For a Subtle Border Under Headers */
-                Padding: 10px;  /* Optional: For a Touch of Space Around Text */
-                text-align: center;
+                border-bottom: 0; /* Removing the border */
+                display: block;
+                position: relative;
+                text-align: right;
+                padding-left: 0;
+                font-style: italic;
+    ;
             }}
-            td {{
-
-                Border-Bottom: 4px Solid #ddd; /* Optional: For Subtle Borders Between Table Cells */
-                Padding: 10px; /* Optional: For a Touch of Space Around Text */
-                text-align: center;
-            }}
-
-            tr:hover {{
-                background-color: #a1a1a1; /* Optional: Hover row color */
-                cursor: pointer;
-            }}
-            a {{
-                color: #000000;
-                text-decoration: none;
-            }}
-
-        @media (max-width: 500px) {{
-             td, th, tr {{
-            border:none; !important;
-            border-bottom: none !important; /* Removing the border and ensuring this rule has high specificity */
-            border-top: none !important; /* Removing the top border as well */
-
-        }}
-            td:first-child, th:first-child {{
-            #background-color: #1C8394;
-                background-color: #1C8394; /* Choose your color */
-                color: white; /* Text color, choose what suits your background color */
-                border-radius: 5px; /* Optional: for rounded corners */
-                padding: 10px; /* Space inside the cell */
+    
+            th:before {{
+                content: attr(data-title);
+                position: absolute;
+                left: 0;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
                 text-align: left;
             }}
-            td {{
-            border-bottom: 0; /* Removing the border */
-            display: block;
-            position: relative;
-            padding-left: 0;
-            padding-right: 30px;
-            text-align: right;
-            font-weight: bold;
-            font-style: roboto;
+    
+            .dataframe thead {{
+                display: none; /* Hide headers */
             }}
-
-        td:before {{
-            content: attr(data-title);
-            position: absolute;
-            left: 0;
-            width: 45%;
-            padding-right: 10px;
-            white-space: nowrap;
-            text-align: right;
-            font-weight: normal;
+    
+            .dataframe tbody td:not(:first-child) {{
+                display: block;
+                position: relative;
+                padding-left: 0; /* Resetting padding to 0 */
+                font-weight: normal;
+                font-style: roboto;
+                border: none;
+            }}
+    
+            .dataframe tbody td:not(:first-child):before {{
+                 content: attr(data-title);
+                position: absolute;
+                left: 0;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: normal;
+    
+            }}
         }}
+    
+            </style>
+            """
 
-        th {{
-            border-bottom: 0; /* Removing the border */
-            display: block;
-            position: relative;
-            text-align: right;
-            padding-left: 0;
-            font-style: italic;
-;
-        }}
+            st.markdown(table_style.format(), unsafe_allow_html=True)
+            # Define the number of rows per page
+            rows_per_page = 30
 
-        th:before {{
-            content: attr(data-title);
-            position: absolute;
-            left: 0;
-            width: 45%;
-            padding-right: 10px;
-            white-space: nowrap;
-            text-align: left;
-        }}
+            # Calculate the number of pages
+            num_pages = len(resultados_sem_data_scrape) // rows_per_page
+            if len(resultados_sem_data_scrape) % rows_per_page > 0:
+                num_pages += 1
 
-        .dataframe thead {{
-            display: none; /* Hide headers */
-        }}
+            start_idx = (st.session_state['page'] - 1) * rows_per_page
+            end_idx = st.session_state['page'] * rows_per_page
 
-        .dataframe tbody td:not(:first-child) {{
-            display: block;
-            position: relative;
-            padding-left: 0; /* Resetting padding to 0 */
-            font-weight: normal;
-            font-style: roboto;
-            border: none;
-        }}
+            resultados_sem_data_scrape = resultados_sem_data_scrape.iloc[start_idx:end_idx]
+            # capitalize the first letter of the columns
+            resultados_sem_data_scrape.columns = [col.capitalize() for col in resultados_sem_data_scrape.columns]
+            # rename the columns area to include an (m²)
+            resultados_sem_data_scrape = resultados_sem_data_scrape.rename(
+                columns={'Area': 'Area (m²)', 'Preco': 'Preço (R$)'})
+            # make the link clickable, the text of the link is the name between the www. and .com
+            resultados_sem_data_scrape['Link'] = resultados_sem_data_scrape['Link'].apply(lambda x: f"<a href='{x}' target='_blank'>{x[12:x.find('.com')].capitalize().replace('Imobiliariajunqueira', 'Junqueira')}</a>")
 
-        .dataframe tbody td:not(:first-child):before {{
-             content: attr(data-title);
-            position: absolute;
-            left: 0;
-            width: 45%;
-            padding-right: 10px;
-            white-space: nowrap;
-            text-align: left;
-            font-weight: normal;
+            st.markdown(table_style.format(), unsafe_allow_html=True)
+            st.write(resultados_sem_data_scrape.to_html(escape=False, index=False), unsafe_allow_html=True)
+            html("""
+            <script>
+            /*if the size of the window is over 600px*/
+            if (parent.window.innerWidth > 600) {{
+            var links = parent.window.document.querySelectorAll('tbody tr td a');
+                        for (var i = 0; i < links.length; i++) {{
+    
+                            links[i].innerHTML = '🏠';
+                        }}
+                        }}
+            </script>
+            """, height=0, width=0)
+            # get the position of the link column
+            link_column = resultados_sem_data_scrape.columns.get_loc('Link')
 
-        }}
-    }}
+            b1, b2 = st.columns(2)
+            Previous = b1.button('Página Anterior', use_container_width=True)
 
-        </style>
-        """
+            Next = b2.button('Próxima Pagina', use_container_width=True)
 
-        st.markdown(table_style.format(), unsafe_allow_html=True)
-        # Define the number of rows per page
-        rows_per_page = 30
+            # Create Next and Previous buttons
+            if Previous and st.session_state['page'] > 1:
+                st.session_state['page'] -= 1
 
-        # Calculate the number of pages
-        num_pages = len(resultados_sem_data_scrape) // rows_per_page
-        if len(resultados_sem_data_scrape) % rows_per_page > 0:
-            num_pages += 1
+            if Next and st.session_state['page'] < num_pages:
+                st.session_state['page'] += 1
 
-        start_idx = (st.session_state['page'] - 1) * rows_per_page
-        end_idx = st.session_state['page'] * rows_per_page
 
-        resultados_sem_data_scrape = resultados_sem_data_scrape.iloc[start_idx:end_idx]
-        # capitalize the first letter of the columns
-        resultados_sem_data_scrape.columns = [col.capitalize() for col in resultados_sem_data_scrape.columns]
-        # rename the columns area to include an (m²)
-        resultados_sem_data_scrape = resultados_sem_data_scrape.rename(
-            columns={'Area': 'Area (m²)', 'Preco': 'Preço (R$)'})
-        # make the link clickable, the text of the link is the name between the www. and .com
-        resultados_sem_data_scrape['Link'] = resultados_sem_data_scrape['Link'].apply(lambda
-                                                                                          x: f"<a href='{x}' target='_blank'>{x[12:x.find('.com')].capitalize().replace('Imobiliariajunqueira', 'Junqueira')}</a>")
-
-        st.markdown(table_style.format(), unsafe_allow_html=True)
-        st.write(resultados_sem_data_scrape.to_html(escape=False, index=False), unsafe_allow_html=True)
-        html("""
-        <script>
-        /*if the size of the window is over 600px*/
-        if (parent.window.innerWidth > 600) {{
-        var links = parent.window.document.querySelectorAll('tbody tr td a');
-                    for (var i = 0; i < links.length; i++) {{
-
-                        links[i].innerHTML = '🏠';
+            html(f"""
+                    <script>
+                    function replaceText(document) {{
+                        if (parent.window.innerWidth > 600) {{
+                        var links = document.querySelectorAll('tbody tr td a');
+                        for (var i = 0; i < links.length; i++) {{
+    
+                            links[i].innerHTML = '🏠';
+                        }}
+                        }}
                     }}
+    
+    
+                    function addDataTitles(document) {{
+    
+                        const table = document.querySelector('.dataframe');
+                        const headers = Array.from(table.querySelectorAll('thead th'))
+                            .map(th => th.textContent);
+    
+    
+                        const rows = table.querySelectorAll('tbody tr');            
+                        rows.forEach(row => {{
+                            const cells = row.querySelectorAll('td');
+                            cells.forEach((cell, index) => {{
+                            if (index === 0) {{
+                                 cell.setAttribute('row-scope', '1');
+                            }}
+                            else{{
+                                cell.setAttribute('data-title', headers[index]);
+                                }}
+                            }});
+                        }});
                     }}
-        </script>
-        """, height=0, width=0)
-        # get the position of the link column
-        link_column = resultados_sem_data_scrape.columns.get_loc('Link')
-
-        b1, b2 = st.columns(2)
-        Previous = b1.button('Página Anterior', use_container_width=True)
-
-        Next = b2.button('Próxima Pagina', use_container_width=True)
-
-        # Create Next and Previous buttons
-        if Previous and st.session_state['page'] > 1:
-            st.session_state['page'] -= 1
-
-        if Next and st.session_state['page'] < num_pages:
-            st.session_state['page'] += 1
+                    const elements = parent.window.document.querySelectorAll('.stButton > button');
+                    elements[3].addEventListener('click', function() {{
+                        console.log('executing');
+                        /*wait 1 second and exec the functions*/
+                        setTimeout(function() {{
+                            console.log('executed');
+                            replaceText(parent.window.document);
+                            addDataTitles(parent.window.document);
+                        }}, 1000);
+    
+                    }});
+                    elements[4].addEventListener('click', function() {{
+                        addDataTitles(parent.window.document);
+                        replaceText(parent.window.document);
+    
+                    }});
+                    elements[5].addEventListener('click', function() {{
+                        addDataTitles(parent.window.document);
+                        replaceText(parent.window.document);
+    
+                    }});
+                    addDataTitles(parent.window.document);
+    
+    
+                    </script>
+    
+                    """, width=0, height=0)
 
         modal_alerta = Modal("Criar Alerta", key="modal_alerta_key")
 
@@ -481,85 +532,24 @@ if 'bairro' in st.session_state and 'preco' in st.session_state:
         if btn_criar_alerta:
             modal_alerta.open()
 
-        html(f"""
-                <script>
-                function replaceText(document) {{
-                    if (parent.window.innerWidth > 600) {{
-                    var links = document.querySelectorAll('tbody tr td a');
-                    for (var i = 0; i < links.length; i++) {{
-
-                        links[i].innerHTML = '🏠';
-                    }}
-                    }}
-                }}
-
-
-                function addDataTitles(document) {{
-
-                    const table = document.querySelector('.dataframe');
-                    const headers = Array.from(table.querySelectorAll('thead th'))
-                        .map(th => th.textContent);
-
-
-                    const rows = table.querySelectorAll('tbody tr');            
-                    rows.forEach(row => {{
-                        const cells = row.querySelectorAll('td');
-                        cells.forEach((cell, index) => {{
-                        if (index === 0) {{
-                             cell.setAttribute('row-scope', '1');
-                        }}
-                        else{{
-                            cell.setAttribute('data-title', headers[index]);
-                            }}
-                        }});
-                    }});
-                }}
-                const elements = parent.window.document.querySelectorAll('.stButton > button');
-                elements[3].addEventListener('click', function() {{
-                    console.log('executing');
-                    /*wait 1 second and exec the functions*/
-                    setTimeout(function() {{
-                        console.log('executed');
-                        replaceText(parent.window.document);
-                        addDataTitles(parent.window.document);
-                    }}, 1000);
-
-                }});
-                elements[4].addEventListener('click', function() {{
-                    addDataTitles(parent.window.document);
-                    replaceText(parent.window.document);
-
-                }});
-                elements[5].addEventListener('click', function() {{
-                    addDataTitles(parent.window.document);
-                    replaceText(parent.window.document);
-
-                }});
-                addDataTitles(parent.window.document);
-
-
-                </script>
-
-                """, width=0, height=0)
-
         st.markdown(
             f"""
-                <style>
-                div[data-modal-container='true'][key='{modal_alerta.key}'] {{
-                    width: calc(100vw - 300px) !important;  <!-- Ajusta a largura -->
-                    left: 300px !important; <!-- Posiciona o modal após a barra lateral -->
-                }}
+                            <style>
+                            div[data-modal-container='true'][key='{modal_alerta.key}'] {{
+                                width: calc(100vw - 300px) !important;  <!-- Ajusta a largura -->
+                                left: 300px !important; <!-- Posiciona o modal após a barra lateral -->
+                            }}
 
-                div[data-modal-container='true'][key='{modal_alerta.key}'] > div:first-child > div:first-child {{
-                    background-color: black !important;  <!-- Cor de fundo do modal em preto -->
-                    color: #eee !important;  <!-- Cor do texto do modal em modo escuro -->
-                }}
+                            div[data-modal-container='true'][key='{modal_alerta.key}'] > div:first-child > div:first-child {{
+                                background-color: black !important;  <!-- Cor de fundo do modal em preto -->
+                                color: #eee !important;  <!-- Cor do texto do modal em modo escuro -->
+                            }}
 
-                div[data-modal-container='true'][key='{modal_alerta.key}']::before {{
-                    background-color: rgba(0, 0, 0, 0.5) !important;  <!-- Cor do fundo semi-transparente em preto -->
-                }}
-                </style>
-                """,
+                            div[data-modal-container='true'][key='{modal_alerta.key}']::before {{
+                                background-color: rgba(0, 0, 0, 0.5) !important;  <!-- Cor do fundo semi-transparente em preto -->
+                            }}
+                            </style>
+                            """,
             unsafe_allow_html=True
         )
         # Conteúdo do modal
@@ -574,7 +564,14 @@ if 'bairro' in st.session_state and 'preco' in st.session_state:
                 # Botão de confirmação
                 if st.button("Confirmar"):
                     st.toast('Enviando alerta ')
-                    time.sleep(3)
-                    st.toast('Alerta cadastrado!', icon='🎉')
-                    time.sleep(.5)
+                    # Envia o e-mail
+                    dados = st.session_state.to_dict()
+                    # nao pegar chaves que tenham 'key' e 'page' no nome
+                    dados = {k: v for k, v in dados.items() if 'key' not in k and 'page' not in k}
+                    st.write(dados)
+                    # st.toast(helper.insert_email(email, dados), icon='🎉')
+                    # transform the dict into a json
+                    dados = json.dumps(dados)
+                    st.write(helper.insert_email(email, dados))
+                    time.sleep(.8)
                     modal_alerta.close()
