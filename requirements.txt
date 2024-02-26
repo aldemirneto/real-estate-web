@@ -14,3 +14,4 @@ streamlit-modal
 streamlit-js-eval
 sqlalchemy
 duckdb
+pandasai
