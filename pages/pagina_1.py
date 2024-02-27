@@ -214,7 +214,7 @@ else:
     area = col4.number_input('Área mínima em m2', min_value=0, max_value=1000, value=st.session_state.area, step=10)
 
 
-preco = st.slider("Preço máximo", min_value=0, max_value=int(df['preco'].max()), value=1000, step=100)
+preco = st.slider("Preço máximo", min_value=0, max_value=int(df['preco'].mean()+1000000), value=1000, step=100)
 st.session_state['preco'] = preco
 
 
