@@ -38,7 +38,7 @@ df['geometry'] = df['geometry'].to_crs(target_crs)
 df['centroid'] = df['geometry'].centroid
 
 # create a column with the average price per neighborhood(if the neighborhood has more than 10 estates), read from the csv file
-df_bairros = pd.read_csv('imoveis.csv', sep=';')
+df_bairros = pd.read_parquet('lineitem.parquet')
 # Remove non-numeric values from 'preco' column
 df_bairros['preco'] = pd.to_numeric(df_bairros['preco'], errors='coerce')
 
