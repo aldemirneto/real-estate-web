@@ -95,7 +95,7 @@ st.title('Real Estate Price Prediction')
 st.markdown("---")
 
 # Load the dataset to get the unique neighborhood values
-df = pd.read_csv('imoveis.csv', sep=';')
+df = pd.read_parquet('lineitem.parquet')
 neighborhoods = df['bairro'].unique().tolist()
 
 #
