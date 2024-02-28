@@ -120,6 +120,6 @@ with st.status("Gerando Recomendação"):
 
             st.data_editor(recommendations[['area', 'preco', 'quartos','banheiros','bairro','link']])
         except Exception as e:
-            st.write(f"Erro {e}aconteceu durante a geração de recomendação")
+            st.write(f"houve um erro durante a geração da sua recomendação")
     else:
         st.markdown("## nao tem recomendação")
