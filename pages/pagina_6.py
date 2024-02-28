@@ -110,13 +110,16 @@ with st.status("Gerando Recomendação"):
     dados = {k: v for k, v in dados.items() if 'key' not in k and 'page' not in k}
     st.write("tratando dados do usuario...")
     if dados != {}:
-        data = dict()
-        data['numerical'] = [dados['preco'], dados['area'], dados['quartos'], dados['banheiros']]
-        data['bairro'] = dados['bairro']
-        st.write("Gerando Recomendação")
-        recommendations = recommend_properties(data, df_encoded)
-        recommendations.reset_index(drop=True, inplace=True)
+        try:
+            data = dict()
+            data['numerical'] = [dados['preco'], dados['area'], dados['quartos'], dados['banheiros']]
+            data['bairro'] = dados['bairro']
+            st.write("Gerando Recomendação")
+            recommendations = recommend_properties(data, df_encoded)
+            recommendations.reset_index(drop=True, inplace=True)
 
-        st.data_editor(recommendations[['area', 'preco', 'quartos','banheiros','bairro','link']])
+            st.data_editor(recommendations[['area', 'preco', 'quartos','banheiros','bairro','link']])
+        except Exception as e:
+            st.write(f"Erro {e}aconteceu durante a geração de recomendação")
     else:
         st.markdown("## nao tem recomendação")
