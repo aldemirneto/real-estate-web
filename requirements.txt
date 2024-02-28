@@ -15,4 +15,4 @@ streamlit-js-eval
 sqlalchemy
 duckdb
 pandasai
-sklearn
+scikit-learn
