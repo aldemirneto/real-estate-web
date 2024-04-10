@@ -26,6 +26,7 @@ Esta página fornece uma visão geral dos dados de cada bairro de Piracicaba no 
     
 """)
 
+
 df = gpd.read_file('piracicaba.json')
 
 # Specify the target projected CRS
@@ -42,57 +43,60 @@ df_bairros = pd.read_parquet('lineitem.parquet')
 # Remove non-numeric values from 'preco' column
 df_bairros['preco'] = pd.to_numeric(df_bairros['preco'], errors='coerce')
 
-# Filter out groups with less than 10 rows
-df_bairros = df_bairros.groupby('bairro').filter(lambda x: len(x) > 10)
+
 
 # Calculate the mean of 'preco' after grouping
-df_bairros = df_bairros.groupby('bairro')['preco'].mean().reset_index()
-#comparing the two dataframes, we can see that the neighborhood names are not the same
-#so we need to change the names in one of the dataframes
+df_bairros_price = df_bairros.copy(deep=True).groupby('bairro')['preco'].mean().reset_index()
+df_bairros_area = df_bairros.copy(deep=True).groupby('bairro')['area'].mean().reset_index()
+
+df_bairros = df_bairros_price.merge(df_bairros_area, left_on='bairro', right_on='bairro')
+
+
+# comparing the two dataframes, we can see that the neighborhood names are not the same
+# so we need to change the names in one of the dataframes
 
 df['Name'] = df['Name'].str.replace(' ', '_')
 df['Name'] = df['Name'].str.capitalize()
 df['Name'] = df['Name'].str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('utf-8')
 
-
-#replace 'Bairro Alto' with 'Alto' in the df dataframe
+# replace 'Bairro Alto' with 'Alto' in the df dataframe
 df['Name'] = df['Name'].str.replace('Bairro_alto', 'Alto')
 
-
-#now i want the column preco of the df_bairros dataframe to be in the df dataframe
+# now i want the column preco of the df_bairros dataframe to be in the df dataframe
 df = df.merge(df_bairros, left_on='Name', right_on='bairro', how='left')
 
-#drop the column bairro and switch NA values to 0
+# drop the column bairro and switch NA values to 0
 df = df.drop(columns=['bairro'])
 df['preco'] = df['preco'].fillna(0)
-df['preco'] = df['preco']/1000000
+df['preco_m2'] = df['preco'] / df['area']
 
-#create the folium map
-#the starting point is the centroid of the 'centro' neighborhood
-m = folium.Map(location=[df.loc[df['Name'] == 'Centro', 'centroid'].values[0].y, df.loc[df['Name'] == 'Centro', 'centroid'].values[0].x], zoom_start=12.5)
 
-#marker for each neighborhood with the color based on the average price of the neighborhood
+# create the folium map
+# the starting point is the centroid of the 'centro' neighborhood
+m = folium.Map(location=[df.loc[df['Name'] == 'Centro', 'centroid'].values[0].y,
+                         df.loc[df['Name'] == 'Centro', 'centroid'].values[0].x], zoom_start=12.5)
+
+# marker for each neighborhood with the color based on the average price of the neighborhood
 for i in range(len(df)):
     folium.Marker(
         location=[df.loc[i, 'centroid'].y, df.loc[i, 'centroid'].x],
-        tooltip=f"Preço médio venda bairro {df.loc[i,'Name'].replace('_', ' ')}<br>" \
-              f"<div style='text-align: center;'>{float(round(df.loc[i, 'preco'],2)) if df.loc[i, 'preco'] > 0.0 else 'N/A'} milhões de reais</div>",
-        icon=folium.Icon(color='green' if df.loc[i, 'preco'] < 1 else 'orange' if df.loc[i, 'preco'] < 2 else 'red')
+        tooltip=f"Preço médio venda bairro {df.loc[i, 'Name'].replace('_', ' ')}<br>" \
+                f"<div style='text-align: center;'>{float(round(df.loc[i, 'preco_m2'], 2)) if df.loc[i, 'preco_m2'] > 0.0 else 'N/A'} reais por metro quadrado</div>",
+        icon=folium.Icon(color='green' if df.loc[i, 'preco_m2'] < 1000 else 'orange' if df.loc[i, 'preco_m2'] < 3500 else 'red' if df.loc[i, 'preco_m2'] > 3500 else 'black' )
     ).add_to(m)
 # m.show_in_browser()
-#plot the choropleth map
+# plot the choropleth map
 choropleth = folium.Choropleth(
     geo_data=df[['Name', 'geometry']],
     data=df,
-    columns=['Name', 'preco'],
+    columns=['Name', 'preco_m2'],
     key_on='feature.properties.Name',
     fill_color='YlOrRd',
     fill_opacity=0.7,
     line_opacity=0.2,
     line_weight=3,
-    legend_name='Preço médio dos imóveis (milhões de reais)'
+    legend_name='Preço médio dos imóveis por metro quadrado'
 ).add_to(m)
-
 
 
 # # Renderiza o mapa no Streamlit

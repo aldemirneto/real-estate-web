@@ -1,3 +1,6 @@
+import os
+
+from openai import OpenAI
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -61,6 +64,26 @@ def load_model():
     xgb_model.load_model('Model/xgb_model.json')
     return xgb_model
 
+st.markdown('# Escolha um modelo para começar a predição')
+c1, c2 = st.columns(2)
+
+xgboost = c1.button('XGBOOST', use_container_width=True)
+gpt = c2.button('ChatGPT', use_container_width=True)
+
+if 'modelo' not in st.session_state:
+    st.session_state['modelo'] = 'sem_modelo'
+try:
+    if xgboost:
+        st.session_state['modelo'] = 'xgboost'
+    elif gpt:
+        st.session_state['modelo'] = 'gpt'
+    else:
+        modelo = "sem modelo"  # Use the defined variable for clarity
+except NameError:
+    st.error("Please ensure either 'xgboost' or 'gpt' variable is defined.")
+    st.stop()  # Halt execution to prevent unexpected behavior
+
+
 
 # Load the XGBoost model
 xgb_model = load_model()
@@ -83,15 +106,73 @@ def preprocess_input(data):
 
     return df
 
+def predict_gpt(input_data):
+    client = OpenAI(api_token=os.environ['OPENAI_API_KEY'])
 
+    # Define os anúncios de imóveis
+    anuncios = [
+        {"preco": 250000.0, "condominio": None, "area": 69.91, "quartos": 3, "vagas": 2, "banheiros": 2,
+         "imobiliaria": "Frias_neto", "bairro": "Centro", "status": "Compra",
+         "tipo": "Apartamento"},
+        {"preco": 140000.0, "condominio": None, "area": 61.46, "quartos": 2, "vagas": 1, "banheiros": 1,
+         "imobiliaria": "Frias_neto", "bairro": "Nova_america", "status": "Compra",
+         "tipo": "Apartamento"},
+        {"preco": 195000.0, "condominio": None, "area": 57.0, "quartos": 2, "vagas": 1, "banheiros": 1,
+         "imobiliaria": "Frias_neto", "bairro": "Nova_america", "status": "Compra",
+         "tipo": "Apartamento"},
+        {"preco": 240000.0, "condominio": None, "area": 100.9, "quartos": 3, "vagas": 1, "banheiros": 1,
+         "imobiliaria": "Frias_neto", "bairro": "Alto", "status": "Compra",
+         "tipo": "Apartamento"},
+        {"preco": 250000.0, "condominio": None, "area": 62.0, "quartos": 2, "vagas": 1, "banheiros": 2,
+         "imobiliaria": "Frias_neto", "bairro": "Paulista", "status": "Compra",
+         "tipo": "Apartamento", },
+        {"preco": 250000.0, "condominio": None, "area": 62.0, "quartos": 2, "vagas": 1, "banheiros": 2,
+
+         "imobiliaria": "Frias_neto", "bairro": "Paulista", "status": "Compra",
+         "tipo": "Apartamento"},
+        {"preco": 380000.0, "condominio": None, "area": 63.0, "quartos": 2, "vagas": 2, "banheiros": 2,
+
+         "imobiliaria": "Frias_neto", "bairro": "Paulista", "status": "Compra",
+         "tipo": "Apartamento"},
+        {"preco": 290000.0, "condominio": None, "area": 125.0, "quartos": 2, "vagas": 2, "banheiros": 1,
+
+         "imobiliaria": "Frias_neto", "bairro": "Vila_sonia", "status": "Compra",
+         "tipo": "Casa"},
+        {"preco": 230000.0, "condominio": None, "area": 55.0, "quartos": 2, "vagas": 1, "banheiros": 1,
+
+         "imobiliaria": "Frias_neto", "bairro": "Jardim_nova_iguacu", "status": "Compra",
+         "tipo": "Apartamento"},
+        {"preco": 138000.0, "condominio": None, "area": 45.0, "quartos": 2, "vagas": 1, "banheiros": 1,
+
+         "imobiliaria": "Frias_neto", "bairro": "Dois_corregos", "status": "Compra",
+         "tipo": "Apartamento"},
+        {"preco": 620000.0, "condominio": None, "area": 392.0, "quartos": 3, "vagas": 3, "banheiros": 3,
+
+         "imobiliaria": "Frias_neto", "bairro": "Nova_piracicaba", "status": "Compra",
+         "tipo": "Casa"},
+    ]
+
+    # Converte os anúncios para JSON
+    anuncios_json = json.dumps(anuncios)
+    anuncio_predito = json.dumps(input_data)
+
+
+    stream = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "system",
+                   "content": f"Você é um corretor de imoveis, acostumado a estimar preços de casas, passado os seguintes imoveis de uma cidade:{anuncios_json}, voce irá estimar exatamente o valor do imovel que eu irei passar para voce na pergunta"},
+                  {"role": "user",
+                   "content": f"Tenho esse imóvel {anuncio_predito}, qual o valor dele? quero apenas o valor dele formatado, separando as casas decimais, sem nenhum texto a mais, assim: no caso de valor ser 250.690,00 retorne apenas 250.690"}],
+
+    )
+
+    return stream.choices[0].message.content
 # Function to predict prices using the loaded model
 def predict_prices(data):
     input_data = preprocess_input(data)
     predictions = xgb_model.predict(input_data)
     return predictions
 
-
-st.title('Real Estate Price Prediction')
 st.markdown("---")
 
 # Load the dataset to get the unique neighborhood values
@@ -99,29 +180,32 @@ df = pd.read_parquet('lineitem.parquet')
 neighborhoods = df['bairro'].unique().tolist()
 
 #
-selected_neighborhoods = st.selectbox('Select Neighborhood(s)', neighborhoods)
-area = st.number_input('Area (in square meters)', min_value=0)
-bedrooms = st.number_input('Number of bedrooms', min_value=0)
-bathrooms = st.number_input('Number of bathrooms', min_value=0)
-parking_spaces = st.number_input('Number of parking spaces', min_value=0)
+selected_neighborhoods = st.selectbox('Bairros selecionados', neighborhoods)
+area = st.number_input('Area (em metros quadrados)', min_value=0)
+quartos = st.number_input('numero de quartos', min_value=0)
+banheiros = st.number_input('numero de banheiros', min_value=0)
+vagas = st.number_input('numero de vagas', min_value=0)
 
 # Prepare input data
 input_data = {
     'bairro': selected_neighborhoods,
     'area': area,
-    'quartos': bedrooms,
-    'vagas': parking_spaces,
-    'banheiros': bathrooms
+    'quartos': quartos,
+    'vagas': vagas,
+    'banheiros': banheiros
 }
 
 # Make the prediction
 if st.button('Predict'):
-
-    prediction = predict_prices(input_data)
-
+    prediction = None
+    if st.session_state['modelo'] == 'xgboost':
+        prediction = predict_prices(input_data)[0] / 1000
+        # write the price in thousands with 2 decimals
+    elif st.session_state['modelo'] =='gpt':
+        prediction = predict_gpt(input_data)
+        print('prediction')
     st.subheader('Preço Estimado')
-    # write the price in thousands with 2 decimals
-    st.success(f"O Preço do seu imóvel é R${prediction[0] / 1000:.3f} mil reais")
+    st.success(f"O Preço do seu imóvel é R${float(prediction) :.3f}")
 
 
 # Attribution
