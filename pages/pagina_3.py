@@ -107,7 +107,7 @@ def preprocess_input(data):
     return df
 
 def predict_gpt(input_data):
-    client = OpenAI(api_token=os.environ['OPENAI_API_KEY'])
+    client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
 
     # Define os anúncios de imóveis
     anuncios = [
