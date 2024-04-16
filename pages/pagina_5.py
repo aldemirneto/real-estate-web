@@ -84,7 +84,7 @@ if prompt := st.chat_input(placeholder="como posso te ajudar?"):
 pandas_df_agent = create_pandas_dataframe_agent(
     llm,
     df,
-    verbose=True,
+    verbose=False,
     agent_type="openai-tools",
     handle_parsing_errors=True,
 )
