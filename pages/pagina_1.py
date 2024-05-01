@@ -41,37 +41,37 @@ Esta página fornece informações detalhadas sobre os imóveis em cada bairro d
 if 'fonte' not in st.session_state:
     st.session_state['fonte'] = 'Compra'
 
-c1, c2 = st.columns(2)
 
-container_compra = c1.empty()
-if st.session_state.fonte == 'Compra':
-    Compra = container_compra.button('Compra', type="primary", use_container_width=True)
-else:
-    Compra = container_compra.button('Compra', use_container_width=True)
-if Compra:
-    if st.session_state.fonte == 'Aluguel':
-        st.session_state.fonte = 'Compra'
-        if 'preco' in st.session_state:
-            del st.session_state['preco']
-        if 'page' not in st.session_state:
-            st.session_state['page'] = 1
-
-        st.rerun()
-
-container_2 = c2.empty()
-if st.session_state.fonte == 'Aluguel':
-    Aluguel = container_2.button('Aluguel', type="primary", use_container_width=True)
-else:
-    Aluguel = container_2.button('Aluguel', use_container_width=True)
-if Aluguel:
-    if st.session_state.fonte == 'Compra':
-        st.session_state.fonte = 'Aluguel'
-        if 'preco' in st.session_state:
-            del st.session_state['preco']
-        if 'page' not in st.session_state:
-            st.session_state['page'] = 1
-        st.rerun()
-
+Compra = st.button('Compra', type="primary", use_container_width=True)
+# container_compra = c1.empty()
+# if st.session_state.fonte == 'Compra':
+#     Compra = container_compra.button('Compra', type="primary", use_container_width=True)
+# else:
+#     Compra = container_compra.button('Compra', use_container_width=True)
+# if Compra:
+#     if st.session_state.fonte == 'Aluguel':
+#         st.session_state.fonte = 'Compra'
+#         if 'preco' in st.session_state:
+#             del st.session_state['preco']
+#         if 'page' not in st.session_state:
+#             st.session_state['page'] = 1
+#
+#         st.rerun()
+#
+# container_2 = c2.empty()
+# if st.session_state.fonte == 'Aluguel':
+#     Aluguel = container_2.button('Aluguel', type="primary", use_container_width=True)
+# else:
+#     Aluguel = container_2.button('Aluguel', use_container_width=True)
+# if Aluguel:
+#     if st.session_state.fonte == 'Compra':
+#         st.session_state.fonte = 'Aluguel'
+#         if 'preco' in st.session_state:
+#             del st.session_state['preco']
+#         if 'page' not in st.session_state:
+#             st.session_state['page'] = 1
+#         st.rerun()
+#
 
 df = pd.read_parquet('lineitem.parquet')
 

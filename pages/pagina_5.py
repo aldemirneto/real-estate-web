@@ -1,120 +1,176 @@
 import os
-
-from langchain_experimental.agents import create_pandas_dataframe_agent
-from langchain_community.callbacks import StreamlitCallbackHandler
-from langchain_community.chat_models import ChatOpenAI
 import streamlit as st
-import pandas as pd
-import uuid
-from datetime import datetime
+from langchain.callbacks.tracers.langchain import wait_for_all_tracers
+from langchain.callbacks.tracers.run_collector import RunCollectorCallbackHandler
+from langchain.memory import ConversationBufferMemory, StreamlitChatMessageHistory
+from langchain.schema.runnable import RunnableConfig
 
+from streamlit_feedback import streamlit_feedback
+
+from chatbot.analytics_chain import initialize_analytical_chain
+from chatbot.conversational_chain import initialize_chain
+from chatbot.vanilla_chain import get_llm_chain
 from helpers.page5 import insert_interaction
 
-st.set_page_config(page_title="LangChain: Chat with pandas DataFrame", page_icon="🦜")
-st.title("🦜 LangChain: Chat with pandas DataFrame")
 
 
-def get_exploration_prompt(df):
-    """
-  Generates a data exploration prompt based on the DataFrame columns.
-  """
-    categorical_cols = df.select_dtypes(include=[pd.api.types.is_categorical_dtype])
-    if not categorical_cols.empty:
-        col_name = categorical_cols.columns[0]
-        return f"What are the different values in the '{col_name}' column?"
-    else:
-        # Add other logic for different data types or pre-defined prompts here
-        return "What would you like to know about this data?"
-
-
-def generate_session_id():
-    return str(uuid.uuid4())
-
-
-if "session_id" not in st.session_state:
-    st.session_state["session_id"] = generate_session_id()
-if "messages" not in st.session_state or st.sidebar.button("Clear conversation history"):
-    st.session_state["messages"] = [{"role": "assistant", "content": "como posso te ajudar??", "feedback": "neutral"}]
-
-# Criar dicionário para armazenar dados da sessão
-session_data = {
-    "session_id": st.session_state["session_id"],
-    "start_time": datetime.now(),
-    "feedback": {},
-    "messages": st.session_state["messages"],
-}
-
-if "session_data" not in st.session_state:
-    st.session_state["session_data"] = session_data
-
-
-def get_user_feedback():
-    """Obtém o feedback do usuário para uma resposta específica."""
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        thumbs_up = st.button("Útil")
-    with col2:
-        thumbs_neutral = st.button("Neutro")
-    with col3:
-        thumbs_down = st.button("Não Útil")
-
-    if thumbs_up:
-        feedback = "positive"
-        st.session_state.messages.append({"role": "assistant", "content": response, "feedback": feedback})
-    elif thumbs_down:
-        feedback = "negative"
-        st.session_state.messages.append({"role": "assistant", "content": response, "feedback": feedback})
-    elif thumbs_neutral:
-        feedback = "neutral"
-        st.session_state.messages.append({"role": "assistant", "content": response, "feedback": feedback})
-
-
-df = pd.read_parquet('lineitem.parquet')
-
-llm = ChatOpenAI(api_key= os.environ['OPENAI_API_KEY'], temperature=0, streaming=True)
-
-for msg in st.session_state.messages:
-    st.chat_message(msg["role"]).write(msg["content"])
-
-if prompt := st.chat_input(placeholder="como posso te ajudar?"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.write(prompt)
-
-pandas_df_agent = create_pandas_dataframe_agent(
-    llm,
-    df,
-    verbose=False,
-    agent_type="openai-tools",
-    handle_parsing_errors=True,
+st.set_page_config(
+    page_title="Encontre seu imóvel perfeito!",
+    page_icon="🦜",
 )
 
-if st.session_state.messages[-1]["role"] != "assistant":
-    with st.chat_message("assistant"):
-        st_cb = StreamlitCallbackHandler(st.container(), expand_new_thoughts=False)
-        response = pandas_df_agent.run(st.session_state.messages, callbacks=[st_cb])
-        st.write(response)
-        get_user_feedback()
+if "last_run" not in st.session_state:
+    st.session_state["last_run"] = "some_initial_value"
 
-conversation_duration = datetime.now() - session_data["start_time"]
+col1, col2, col3 = st.columns([0.6, 3, 1])
 
-# Calcular pontuação média
-if len([f['feedback'] for f in st.session_state.messages if 'feedback' in f]):
-    num_positive_feedback = sum(
-        feedback["feedback"] == "positive" for feedback in st.session_state.messages if
-        'feedback' in feedback and feedback["role"] == "assistant")
-    total_feedback = len([message for message in st.session_state.messages if message["role"] == "assistant"])
-    average_score = (num_positive_feedback / total_feedback) * 100
-    if 'metrics' not in st.session_state:
-        id = st.session_state["session_id"]
-        st.session_state['metrics'] = {"id": id, "average_score": average_score, "duration": conversation_duration}
+st.markdown("___")
+
+if "run_id" not in st.session_state:
+    st.session_state.run_id = None
+
+_DEFAULT_SYSTEM_PROMPT = ""
+system_prompt = _DEFAULT_SYSTEM_PROMPT = ""
+system_prompt = system_prompt.strip().replace("{", "{{").replace("}", "}}")
+
+chain_type = st.sidebar.radio(
+    "Escolha seu modelo de conversação:",
+    ("GPT 3.5", "ConsultorIA", "Analitico"),
+    index=1,
+)
+
+memory = ConversationBufferMemory(
+    chat_memory=StreamlitChatMessageHistory(key="langchain_messages"),
+    return_messages=True,
+    memory_key="chat_history",
+)
+
+if chain_type == "GPT 3.5":
+    chain = get_llm_chain(system_prompt, memory)
+elif chain_type == "Analitico":
+    chain = initialize_analytical_chain()
+else:  # This will be triggered when "ConsultorIA" is selected
+    chain = initialize_chain(system_prompt, _memory=memory)
+
+if st.sidebar.button("Limpar Historico de Mensagens"):
+    memory.clear()
+    st.session_state.run_id = None
+
+
+def _get_openai_type(msg):
+    if msg.type == "human":
+        return "user"
+    if msg.type == "ai":
+        return "assistant"
+    if msg.type == "chat":
+        return msg.role
+    return msg.type
+
+
+for msg in st.session_state.langchain_messages:
+    streamlit_type = _get_openai_type(msg)
+    avatar = "🦜" if streamlit_type == "assistant" else None
+    with st.chat_message(streamlit_type, avatar=avatar):
+        st.markdown(msg.content)
+
+run_collector = RunCollectorCallbackHandler()
+runnable_config = RunnableConfig(
+    callbacks=[run_collector],
+    tags=["Streamlit Chat"],
+)
+
+
+def _reset_feedback():
+    st.session_state.feedback = []
+
+
+MAX_CHAR_LIMIT = 500  # Adjust this value as needed
+
+if prompt := st.chat_input(placeholder="Faça uma pergunta sobre imóveis!"):
+
+    if len(prompt) > MAX_CHAR_LIMIT:
+        st.warning(f"⚠️ Your input is too long! Please limit your input to {MAX_CHAR_LIMIT} characters.")
+        prompt = None  # Reset the prompt so it doesn't get processed further
     else:
+        st.chat_message("user").write(prompt)
 
-        st.session_state.metrics["average_score"] = average_score
-        st.session_state.metrics["duration"] = conversation_duration
+        with st.chat_message("assistant", avatar="🦜"):
+            message_placeholder = st.empty()
+            full_response = ""
 
-if len([message for message in st.session_state.messages if message["role"] == "assistant"]) % 3 == 0:
-    id = st.session_state["session_id"]
-    average_score = st.session_state.metrics["average_score"]
-    interaction_time = st.session_state.metrics["duration"]
-    insert_interaction(interaction_time, average_score, id)
+            input_structure = {"input": prompt}
+            question_structure = {"question": prompt}
+
+            if chain_type == "ConsultorIA":
+                input_structure = {
+                    "question": prompt,
+                    "chat_history": [
+                        (msg.type, msg.content)
+                        for msg in st.session_state.langchain_messages
+                    ],
+                }
+
+            if chain_type == "GPT 3.5":
+                message_placeholder.markdown("thinking...")
+                full_response = chain.invoke(input_structure, config=runnable_config)[
+                    "text"
+                ]
+
+            elif chain_type == "Analitico":
+                full_response = chain.invoke(question_structure, config=runnable_config)
+                memory.save_context({"input": prompt}, {"output": full_response})
+            else:
+                for chunk in chain.stream(input_structure, config=runnable_config):
+                    full_response += chunk["answer"]  # Updated to use the 'answer' key
+                    message_placeholder.markdown(full_response + "▌")
+                memory.save_context({"input": prompt}, {"output": full_response})
+
+            message_placeholder.markdown(full_response)
+
+            run = run_collector.traced_runs[0]
+            run_collector.traced_runs = []
+            st.session_state.run_id = run.id
+            wait_for_all_tracers()
+
+has_chat_messages = len(st.session_state.get("langchain_messages", [])) > 0
+
+# Only show the feedback toggle if there are chat messages
+if has_chat_messages:
+    feedback_option = (
+        "faces" if st.toggle(label="`Thumbs` ⇄ `Faces`", value=False) else "thumbs"
+    )
+else:
+    pass
+
+if st.session_state.get("run_id"):
+    feedback = streamlit_feedback(
+        feedback_type=feedback_option,  # Use the selected feedback option
+        key=f"feedback_{st.session_state.run_id}",
+    )
+
+    # Define score mappings for both "thumbs" and "faces" feedback systems
+    score_mappings = {
+        "thumbs": {"👍": 1, "👎": 0},
+        "faces": {"😀": 1, "🙂": 0.75, "😐": 0.5, "🙁": 0.25, "😞": 0},
+    }
+
+    # Get the score mapping based on the selected feedback option
+    scores = score_mappings[feedback_option]
+
+    if feedback:
+        # Get the score from the selected feedback option's score mapping
+        score = scores.get(feedback["score"])
+
+        if score is not None:
+            # Formulate feedback type string incorporating the feedback option and score value
+            feedback_type_str = f"{feedback_option} {feedback['score']}"
+
+            if 'feedback' not in st.session_state:
+                _reset_feedback()
+            st.session_state.feedback.append({
+                "feedback_id": str(st.session_state.run_id),
+                "score": score,
+            })
+            insert_interaction(str(st.session_state.run_id), score)
+        else:
+            st.warning("Invalid feedback score.")

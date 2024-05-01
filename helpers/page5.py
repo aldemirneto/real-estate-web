@@ -1,7 +1,7 @@
 import os
 
 import duckdb
-def insert_interaction(interaction_time, average_score, usuario):
+def insert_interaction(interaction_id, score):
     # Ensure environment variables are set for DB connection
     if not all(key in os.environ for key in ["DB_ID", "DB_PASSWORD", "DB_REGION", "DB_PORT"]):
         raise EnvironmentError("Database environment variables are not fully set.")
@@ -23,8 +23,8 @@ def insert_interaction(interaction_time, average_score, usuario):
 
 
         conn.execute(f"""
-        INSERT INTO db.user_interaction (interaction_time, average_score, usuario)
-        VALUES ('{interaction_time}', '{average_score}','{usuario}');
+        INSERT INTO db.user_interaction (interaction_id, score)
+        VALUES ('{interaction_id}', '{score}');
         """)
         conn.close()
         return 'Email inserido com sucesso'
