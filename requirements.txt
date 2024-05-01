@@ -21,4 +21,5 @@ scipy~=1.9.3
 langchain~=0.1.9
 langchain-_experimental
 langchain_community
+streamlit-feedback
 tabulate
