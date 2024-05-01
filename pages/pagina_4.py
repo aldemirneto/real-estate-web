@@ -2,13 +2,13 @@ import scipy.stats as stats
 import numpy as np
 import streamlit as st
 import pandas as pd
-
+import sqlite3 as s3
 import plotly.graph_objects as go
 
 # Read the dataset
 data = pd.read_parquet('lineitem.parquet')
 
-
+st.write(s3.version)
 def treated_chart(data):
     # Calculate the IQR
     Q1 = np.percentile(data['preco'], 1)
