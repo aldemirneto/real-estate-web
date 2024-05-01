@@ -25,4 +25,3 @@ streamlit-feedback
 langchain-openai
 tabulate
 chromadb
-distutils
