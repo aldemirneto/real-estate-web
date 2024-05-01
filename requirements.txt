@@ -22,4 +22,5 @@ langchain~=0.1.9
 langchain-_experimental
 langchain_community
 streamlit-feedback
+langchain-openai
 tabulate
