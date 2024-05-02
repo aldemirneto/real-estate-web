@@ -1,4 +1,6 @@
-
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 from langchain.retrievers import SelfQueryRetriever
 
 from langchain_community.vectorstores.chroma import Chroma
@@ -9,7 +11,7 @@ from langchain.chat_models import ChatOpenAI
 import streamlit as st
 from langchain_community.document_loaders import DuckDBLoader
 from langchain.chains.query_constructor.base import AttributeInfo
-
+from langchain_core.prompts import PromptTemplate
 
 
 @st.cache_resource(show_spinner=False)
