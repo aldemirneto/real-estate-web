@@ -1,6 +1,4 @@
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 from langchain.retrievers import SelfQueryRetriever
 
 from langchain_community.vectorstores.chroma import Chroma
