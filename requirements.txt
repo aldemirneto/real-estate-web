@@ -25,4 +25,4 @@ streamlit-feedback
 langchain-openai
 tabulate
 chromadb
-pysqlite-binary
+pysqlite3-binary
