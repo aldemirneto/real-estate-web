@@ -11,10 +11,10 @@ def create_agent(
     system_prompt: str,
 ) -> AgentExecutor:
     """Create a function-calling agent and add it to the graph."""
-    # system_prompt += "\nWork autonomously according to your specialty, using the tools available to you."
-    # " Do not ask for clarification."
-    # " Your other team members (and other teams) will collaborate with you with their own specialties."
-    # " You are chosen for a reason! You are one of the following team members: {team_members}."
+    system_prompt += "\nWork autonomously according to your specialty, using the tools available to you."
+    " Do not ask for clarification."
+    " Your other team members (and other teams) will collaborate with you with their own specialties."
+    " You are chosen for a reason! You are one of the following team members: {team_members}."
     prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -66,7 +66,6 @@ def create_team_supervisor(llm: ChatOpenAI, system_prompt, members) -> str:
                 "system",
                 "Given the conversation above, who should act next?"
                 " Or should we FINISH? Select one of: {options}",
-                "if the option is FINISH, end with a greeting after the FINISH prefix "
             ),
         ]
     ).partial(options=str(options), team_members=", ".join(members))

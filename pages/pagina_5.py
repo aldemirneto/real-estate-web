@@ -5,7 +5,7 @@ from langchain.callbacks.tracers.run_collector import RunCollectorCallbackHandle
 from langchain.memory import ConversationBufferMemory, StreamlitChatMessageHistory
 from langchain.schema.runnable import RunnableConfig
 from langchain_core.messages import HumanMessage
-from agent.graph import chain
+from agent.graph import build_graph
 from streamlit_feedback import streamlit_feedback
 
 from helpers.page5 import insert_interaction
@@ -39,7 +39,7 @@ memory = ConversationBufferMemory(
 )
 
 
-chain = chain
+chain = build_graph()
 if st.sidebar.button("Limpar Historico de Mensagens"):
     memory.clear()
     st.session_state.run_id = None

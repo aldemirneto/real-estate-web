@@ -1,13 +1,12 @@
+import os
+
 from langchain_community.utilities import SQLDatabase
 from sqlalchemy import create_engine
 
-connect_args = {
-        'read_only': True
-    }
-
-engine = create_engine("duckdb:///database/my_database.duckdb", connect_args=connect_args)
+engine = create_engine(f'postgresql://postgres.{os.environ["DB_ID"]}:{os.environ["DB_PASSWORD"]}@aws-0-{os.environ["DB_REGION"]}.pooler.supabase.com:{os.environ["DB_PORT"]}/postgres')
 
 db = SQLDatabase(engine=engine, view_support=True)
+
 
 def get_schema(_):
     schema = db.get_table_info()

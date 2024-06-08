@@ -9,43 +9,23 @@ from langchain.chat_models import ChatOpenAI
 import streamlit as st
 from langchain_community.document_loaders import DuckDBLoader
 from langchain.chains.query_constructor.base import AttributeInfo
-from langchain_core.prompts import PromptTemplate
+
+from agent.multi_agent import create_agent
+from tools.tools import build_rag_tools
 
 
 @st.cache_resource(show_spinner=False)
-def initialize_chain(system_prompt, _memory):
+def initialize_chain():
     llm = ChatOpenAI(temperature=0, max_tokens=1000, model_name="gpt-3.5-turbo", streaming=True)
     doc_contents = "Listing informations aggrouped of piracicaba"
 
-    with open('Metadata/metadata_dataset.json', 'r', encoding='utf-8') as f:
-        # Read the file contents
-        file_content = f.read()
-        # Now parse the JSON data using json.loads
-        dict_attr = json.loads(file_content)
+    retriever_tools = build_rag_tools(llm)
+    retriever_agent = create_agent(
+        llm,
+        retriever_tools,
+        "You are a real estate assistant who can retrieve information from the embedding documents related to real estate information"
+        "DO NOT MAKE UP INFORMATION, if you dont know the answer, just say you dont know and the other member will pick up where you left",
 
-    attribute_info = dict_attr['data']
-    metadata = [AttributeInfo(name=a["name"], description=a["description"], type=a["type"]) for a in attribute_info]
-
-    loader = DuckDBLoader(
-        "SELECT *,CAST(data_scrape as varchar(30)) as data_scrape_varchar,CAST(last_seen AS VARCHAR(30)) as last_varchar FROM read_parquet('lineitem.parquet')",
-        page_content_columns=["link", "area", "preco", "quartos", "banheiros", "vagas", "data_scrape_varchar",
-                              "bairro"],
-        metadata_columns=["area", "preco", "quartos", "banheiros", "vagas", "data_scrape_varchar", "bairro",
-                          "last_varchar", "tipo", "status", "imobiliaria"],
-        )
-
-    data = loader.load()
-    embeddings = OpenAIEmbeddings(model='text-embedding-3-small')
-    vectorstore = Chroma.from_documents(data, embeddings)
-
-    retriever = SelfQueryRetriever.from_llm(
-        llm=llm,
-        document_contents=doc_contents,
-        metadata_field_info=metadata,
-        vectorstore=vectorstore, verbose=True
     )
 
-    qa = ConversationalRetrievalChain.from_llm(llm, retriever,
-                                               memory=_memory)
-
-    return qa
+    return retriever_agent
