@@ -27,3 +27,4 @@ chromadb
 sqlparse
 psycopg2-binary
 faiss-cpu
+pysqlite3-binary

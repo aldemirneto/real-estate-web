@@ -1,11 +1,12 @@
+import pysqlite3
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import json
-import os
-
 from langchain.chains.query_constructor.schema import AttributeInfo
 from langchain_community.document_loaders import PyPDFLoader, DuckDBLoader
 from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
-from langchain.text_splitter import CharacterTextSplitter
+
 
 VECTOR_STORE_PERSIST_PATH = "vector_data"
 
