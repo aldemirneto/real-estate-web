@@ -1,4 +1,4 @@
-from langchain.chains import create_sql_query_chain
+from langchain.chains import create_sql_query_chain, MultiRetrievalQAChain
 from operator import itemgetter
 from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
 from langchain_core.output_parsers import StrOutputParser
@@ -7,6 +7,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI
 from langchain_community.utilities.sql_database import SQLDatabase
 from sqlalchemy import create_engine
+from database.db import get_schema, db
 import streamlit as st
 
 
@@ -21,15 +22,7 @@ def initialize_analytical_chain():
     Answer: """
     )
 
-    connect_args = {
-        'read_only': True
-    }
-    engine = create_engine("duckdb:///database/my_database.duckdb", connect_args=connect_args)
-
-    sql_database = SQLDatabase(engine=engine, view_support=True)
-
-    def get_schema(_):
-        return sql_database.get_table_info()
+    sql_database = db
 
     llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
     write_query = create_sql_query_chain(llm, sql_database)
@@ -51,3 +44,5 @@ def initialize_analytical_chain():
     qa = RunnablePassthrough.assign(output=sql_chain) | save
 
     return qa
+
+

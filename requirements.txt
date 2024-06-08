@@ -14,8 +14,6 @@ streamlit-modal
 streamlit-js-eval
 sqlalchemy
 duckdb~=0.10.0
-pandasai
-scikit-learn
 openai~=1.6.1
 scipy~=1.9.3
 langchain~=0.1.9
@@ -23,6 +21,6 @@ langchain-_experimental
 langchain_community
 streamlit-feedback
 langchain-openai
+langgraph
 tabulate
 chromadb
-pysqlite3-binary

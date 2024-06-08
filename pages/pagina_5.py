@@ -1,15 +1,13 @@
-import os
+
 import streamlit as st
 from langchain.callbacks.tracers.langchain import wait_for_all_tracers
 from langchain.callbacks.tracers.run_collector import RunCollectorCallbackHandler
 from langchain.memory import ConversationBufferMemory, StreamlitChatMessageHistory
 from langchain.schema.runnable import RunnableConfig
-
+from langchain_core.messages import HumanMessage
+from agent.graph import chain
 from streamlit_feedback import streamlit_feedback
 
-from chatbot.analytics_chain import initialize_analytical_chain
-from chatbot.conversational_chain import initialize_chain
-from chatbot.vanilla_chain import get_llm_chain
 from helpers.page5 import insert_interaction
 
 
@@ -33,11 +31,6 @@ _DEFAULT_SYSTEM_PROMPT = ""
 system_prompt = _DEFAULT_SYSTEM_PROMPT = ""
 system_prompt = system_prompt.strip().replace("{", "{{").replace("}", "}}")
 
-chain_type = st.sidebar.radio(
-    "Escolha seu modelo de conversação:",
-    ("GPT 3.5", "ConsultorIA", "Analitico"),
-    index=1,
-)
 
 memory = ConversationBufferMemory(
     chat_memory=StreamlitChatMessageHistory(key="langchain_messages"),
@@ -45,13 +38,8 @@ memory = ConversationBufferMemory(
     memory_key="chat_history",
 )
 
-if chain_type == "GPT 3.5":
-    chain = get_llm_chain(system_prompt, memory)
-elif chain_type == "Analitico":
-    chain = initialize_analytical_chain()
-else:  # This will be triggered when "ConsultorIA" is selected
-    chain = initialize_chain(system_prompt, _memory=memory)
 
+chain = chain
 if st.sidebar.button("Limpar Historico de Mensagens"):
     memory.clear()
     st.session_state.run_id = None
@@ -77,6 +65,7 @@ run_collector = RunCollectorCallbackHandler()
 runnable_config = RunnableConfig(
     callbacks=[run_collector],
     tags=["Streamlit Chat"],
+    configurable={"thread_id": "1", "recursion_limit": 5}
 )
 
 
@@ -98,34 +87,34 @@ if prompt := st.chat_input(placeholder="Faça uma pergunta sobre imóveis!"):
             message_placeholder = st.empty()
             full_response = ""
 
-            input_structure = {"input": prompt}
+            input_structure = {
+                "messages": [
+                    HumanMessage(
+                        content=prompt
+                    )
+                ],
+            },
             question_structure = {"question": prompt}
 
-            if chain_type == "ConsultorIA":
-                input_structure = {
-                    "question": prompt,
-                    "chat_history": [
-                        (msg.type, msg.content)
-                        for msg in st.session_state.langchain_messages
-                    ],
-                }
 
-            if chain_type == "GPT 3.5":
-                message_placeholder.markdown("thinking...")
-                full_response = chain.invoke(input_structure, config=runnable_config)[
-                    "text"
-                ]
+            for chunk in chain.stream({
+                        "messages": [
+                            HumanMessage(
+                                content=prompt
+                            )
+                        ],
+                    }, runnable_config):
+                print('-------------------')
+                print(chunk)
+                print('-------------------')
+                if "__end__" not in chunk:
+                    item = next(iter(chunk.values()))
+                    if "messages" in item:
+                        result = item["messages"][-1].content
 
-            elif chain_type == "Analitico":
-                full_response = chain.invoke(question_structure, config=runnable_config)
-                memory.save_context({"input": prompt}, {"output": full_response})
-            else:
-                for chunk in chain.stream(input_structure, config=runnable_config):
-                    full_response += chunk["answer"]  # Updated to use the 'answer' key
-                    message_placeholder.markdown(full_response + "▌")
-                memory.save_context({"input": prompt}, {"output": full_response})
+            memory.save_context({"input": prompt}, {"output": result})
 
-            message_placeholder.markdown(full_response)
+            message_placeholder.markdown(result)
 
             run = run_collector.traced_runs[0]
             run_collector.traced_runs = []
