@@ -26,3 +26,4 @@ tabulate
 chromadb
 sqlparse
 psycopg2-binary
+faiss-cpu
