@@ -17,12 +17,14 @@ def insert_interaction(interaction_id, score):
         # Securely format the connection string
         db_connection_string = f"postgresql://postgres.{os.environ['DB_ID']}:{os.environ['DB_PASSWORD']}@aws-0-{os.environ['DB_REGION']}.pooler.supabase.com:{os.environ['DB_PORT']}/postgres"
 
+        st.write('linkando...')
         # Attach the connection
         conn.execute(f"""
         ATTACH '{db_connection_string}' AS db (TYPE postgres);
         """)
+        st.write('nao deu certo pra linkar')
 
-
+        st.write('inserindo...')
         conn.execute(f"""
         INSERT INTO db.user_interaction (interaction_id, score)
         VALUES ('{interaction_id}', '{score}');
