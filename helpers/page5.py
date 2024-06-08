@@ -9,11 +9,13 @@ def insert_interaction(interaction_id, score):
     try:
         # Connect to the database
         conn = duckdb.connect()
-        st.write('conectou')
 
+        st.write('instalando postgres...')
+        conn.execute('INSTALL postgres;')
         # Assuming the PostgreSQL extension is pre-installed and just needs to be loaded
-        conn.execute('LOAD postgres;')
 
+        conn.execute('LOAD postgres;')
+        st.write('carregou postgres')
         # Securely format the connection string
         db_connection_string = f"postgresql://postgres.{os.environ['DB_ID']}:{os.environ['DB_PASSWORD']}@aws-0-{os.environ['DB_REGION']}.pooler.supabase.com:{os.environ['DB_PORT']}/postgres"
 
