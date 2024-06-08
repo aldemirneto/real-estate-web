@@ -1,5 +1,5 @@
 import os
-
+import streamlit as st
 import duckdb
 def insert_interaction(interaction_id, score):
     # Ensure environment variables are set for DB connection
@@ -9,7 +9,7 @@ def insert_interaction(interaction_id, score):
     try:
         # Connect to the database
         conn = duckdb.connect()
-        print('conectou')
+        st.write('conectou')
 
         # Assuming the PostgreSQL extension is pre-installed and just needs to be loaded
         conn.execute('LOAD postgres;')
@@ -27,7 +27,7 @@ def insert_interaction(interaction_id, score):
         INSERT INTO db.user_interaction (interaction_id, score)
         VALUES ('{interaction_id}', '{score}');
         """)
-        print('inseriu')
+        st.write('inseriu')
         conn.close()
         return 'Email inserido com sucesso'
 

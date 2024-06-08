@@ -147,7 +147,7 @@ if st.session_state.get("run_id"):
     scores = score_mappings[feedback_option]
 
     if feedback:
-        st.write('feedback')
+
         # Get the score from the selected feedback option's score mapping
         score = scores.get(feedback["score"])
 
@@ -161,8 +161,8 @@ if st.session_state.get("run_id"):
                 "feedback_id": str(st.session_state.run_id),
                 "score": score,
             })
-            st.write('chamou função')
+
             insert_interaction(str(st.session_state.run_id), score)
-            st.write('boa')
+
         else:
             st.warning("Invalid feedback score.")
