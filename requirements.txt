@@ -25,4 +25,4 @@ langgraph
 tabulate
 chromadb
 sqlparse
-psycopg2
+psycopg2-binary
