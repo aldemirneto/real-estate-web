@@ -41,7 +41,7 @@ def agent_node(state, agent, name):
 def create_team_supervisor(llm: ChatOpenAI, system_prompt, members) -> str:
     """An LLM-based router."""
     system_prompt = (
-        "You are a supervisor tasked with translating the user questions from brazilian portuguese to english and managing a conversation between the"
+        "You are a supervisor tasked with managing a conversation between the"
         " following workers:  {members}. Given the following user request,"
         " respond with the worker to act next. Each worker will perform a"
         " task and respond with their results and status. When finished,"
