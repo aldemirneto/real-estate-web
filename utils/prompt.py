@@ -32,7 +32,7 @@ Generate a SQL query to answer [QUESTION]{question}[/QUESTION]
 
 ### Instructions
 - NEVER self-assuming any value, instead, you should join tables to get relevant data or key constraints.
-- Remember that users' komunitas anggota are located in the `anggota` table entirely.
+- Remember that all real estate data are located in the `real_estate_data` view entirely.
 - Eventually, if you cannot answer the question with the available database schema, return 'I do not know'.
 
 ### Database Schema

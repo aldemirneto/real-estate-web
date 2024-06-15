@@ -1,4 +1,6 @@
 import functools
+import sqlite3
+
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langchain.memory import ConversationBufferMemory
 from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage, AIMessage
@@ -16,15 +18,10 @@ from typing_extensions import TypedDict
 from langchain_core.tools import tool
 from langgraph.graph import END, StateGraph
 def build_graph():
-    _memory = ConversationBufferMemory(
-        return_messages=True,
-        memory_key="chat_history",
-    )
-
     llm = ChatOpenAI(model="gpt-3.5-turbo", max_tokens=512, temperature=0, streaming=True)
 
     searcher = initialize_chain()
-    memory = SqliteSaver.from_conn_string(":memory:")
+    memory = SqliteSaver.from_conn_string("checkpoints.sqlite")
     runnable_sql = build_openai_sql(llm)
     sql_tool = SQLTool(sql_chain=runnable_sql, handle_tool_error=True)
     sql_agent = create_agent(

@@ -40,6 +40,13 @@ def agent_node(state, agent, name):
 
 def create_team_supervisor(llm: ChatOpenAI, system_prompt, members) -> str:
     """An LLM-based router."""
+    system_prompt = (
+        "You are a supervisor tasked with translating the user questions from brazilian portuguese to english and managing a conversation between the"
+        " following workers:  {members}. Given the following user request,"
+        " respond with the worker to act next. Each worker will perform a"
+        " task and respond with their results and status. When finished,"
+        " respond with FINISH."
+    )
     options = ["FINISH"] + members
     function_def = {
         "name": "route",
@@ -68,7 +75,7 @@ def create_team_supervisor(llm: ChatOpenAI, system_prompt, members) -> str:
                 " Or should we FINISH? Select one of: {options}",
             ),
         ]
-    ).partial(options=str(options), team_members=", ".join(members))
+    ).partial(options=str(options), members=", ".join(members))
     return (
         prompt
         | llm.bind_functions(functions=[function_def], function_call="route")
