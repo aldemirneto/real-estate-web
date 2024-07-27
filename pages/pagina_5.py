@@ -66,7 +66,7 @@ run_collector = RunCollectorCallbackHandler()
 runnable_config = RunnableConfig(
     callbacks=[run_collector],
     tags=["Streamlit Chat"],
-    configurable={"thread_id": uuid.uuid4(), "recursion_limit": 5}
+    configurable={"thread_id": f"{uuid.uuid4()}", "recursion_limit": 5}
 )
 
 

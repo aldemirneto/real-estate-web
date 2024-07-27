@@ -18,7 +18,7 @@ from typing_extensions import TypedDict
 from langchain_core.tools import tool
 from langgraph.graph import END, StateGraph
 def build_graph():
-    llm = ChatOpenAI(model="gpt-3.5-turbo", max_tokens=512, temperature=0, streaming=True)
+    llm = ChatOpenAI(model="gpt-4o-mini", max_tokens=512, temperature=0, streaming=True)
 
     searcher = initialize_chain()
     memory = SqliteSaver.from_conn_string("checkpoints.sqlite")
@@ -27,8 +27,14 @@ def build_graph():
     sql_agent = create_agent(
         llm,
         [sql_tool] + build_search_tools(),
-        "You are an useful data assistant. "
-        "You are responsible for requests of retrieving user or system data from the database by using provided tools or just talking with the person"
+        "You are a skilled SQL data assistant specializing in database queries and data retrieval. Your primary responsibilities include:"
+        "1. Executing database queries to retrieve user or system data as requested."
+        "2. Utilizing provided tools effectively to accomplish data-related tasks."
+        "3. Interpreting and responding to user inquiries about data."
+        "Guidelines:"
+        "- Work autonomously within your area of expertise."
+        "- Use the tools at your disposal efficiently and appropriately."
+        "- Provide clear, concise responses to data-related questions."
     )
     analytical = sql_agent
 
@@ -93,7 +99,7 @@ def build_graph():
         },
     )
 
-    workflow.set_entry_point("supervisor")
+    workflow.set_entry_point("RAG")
     chain = workflow.compile(checkpointer=memory)
 
     return chain
