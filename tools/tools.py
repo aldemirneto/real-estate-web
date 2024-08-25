@@ -79,21 +79,20 @@ def run_query_save_results(db, query):
     return res
 
 
-def get_hard_query(query: str) -> str:
-    kelamin_P = run_query_save_results(
-        db, "SELECT COUNT(*) FROM anggota WHERE kelamin = 'P';"
-    )
 
-    kelamin_L = run_query_save_results(
-        db, "SELECT COUNT(*) FROM anggota WHERE kelamin = 'L';"
-    )
-    kelamin_P_str = (
-            "Jumlah total anggota berkelamin Perempuan : \n"
-            + json.dumps(kelamin_P, ensure_ascii=False)
-    )
-    kelamin_L_str = (
-            "Jumlah total anggota berkelamin Laki-laki : \n"
-            + json.dumps(kelamin_L, ensure_ascii=False)
-    )
 
-    return kelamin_P_str, kelamin_L_str
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

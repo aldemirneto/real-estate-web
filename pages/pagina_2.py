@@ -43,10 +43,19 @@ df_bairros = pd.read_parquet('lineitem.parquet')
 # Remove non-numeric values from 'preco' column
 df_bairros['preco'] = pd.to_numeric(df_bairros['preco'], errors='coerce')
 
+Q1_area = df_bairros['area'].quantile(0.25)
+Q3_area = df_bairros['area'].quantile(0.75)
+IQR_area = Q3_area - Q1_area
+df_bairros = df_bairros[(df_bairros['area'] >= Q1_area - 1.5 * IQR_area) & (df_bairros['area'] <= Q3_area + 1.5 * IQR_area)]
 
+Q1_preco = df_bairros['preco'].quantile(0.25)
+Q3_preco = df_bairros['preco'].quantile(0.75)
+IQR_preco = Q3_preco - Q1_preco
+df_bairros = df_bairros[(df_bairros['preco'] >= Q1_preco - 1.5 * IQR_preco) & (df_bairros['preco'] <= Q3_preco + 1.5 * IQR_preco)]
 
+df_bairros['preco_m2'] = df_bairros['preco'] / df_bairros['area']
 # Calculate the mean of 'preco' after grouping
-df_bairros_price = df_bairros.copy(deep=True).groupby('bairro')['preco'].mean().reset_index()
+df_bairros_price = df_bairros.copy(deep=True).groupby('bairro')['preco_m2'].mean().reset_index()
 df_bairros_area = df_bairros.copy(deep=True).groupby('bairro')['area'].mean().reset_index()
 
 df_bairros = df_bairros_price.merge(df_bairros_area, left_on='bairro', right_on='bairro')
@@ -66,9 +75,9 @@ df['Name'] = df['Name'].str.replace('Bairro_alto', 'Alto')
 df = df.merge(df_bairros, left_on='Name', right_on='bairro', how='left')
 
 # drop the column bairro and switch NA values to 0
-df = df.drop(columns=['bairro'])
-df['preco'] = df['preco'].fillna(0)
-df['preco_m2'] = df['preco'] / df['area']
+df = df.drop(columns=['bairro']).dropna(subset=['preco_m2', 'area'], how='all').reset_index()
+
+
 
 
 # create the folium map
@@ -82,7 +91,7 @@ for i in range(len(df)):
         location=[df.loc[i, 'centroid'].y, df.loc[i, 'centroid'].x],
         tooltip=f"Preço médio venda bairro {df.loc[i, 'Name'].replace('_', ' ')}<br>" \
                 f"<div style='text-align: center;'>{float(round(df.loc[i, 'preco_m2'], 2)) if df.loc[i, 'preco_m2'] > 0.0 else 'N/A'} reais por metro quadrado</div>",
-        icon=folium.Icon(color='green' if df.loc[i, 'preco_m2'] < 1000 else 'orange' if df.loc[i, 'preco_m2'] < 3500 else 'red' if df.loc[i, 'preco_m2'] > 3500 else 'black' )
+        icon=folium.Icon(color='green' if df.loc[i, 'preco_m2'] < 3000 else 'orange' if df.loc[i, 'preco_m2'] < 4500 else 'red' if df.loc[i, 'preco_m2'] > 4500 else 'black' )
     ).add_to(m)
 # m.show_in_browser()
 # plot the choropleth map
