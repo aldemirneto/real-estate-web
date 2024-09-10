@@ -40,9 +40,5 @@ Com as informações obtidas o Preditor oferece previsões precisas sobre o pre�
 O Preditor de Preço de Imóveis em Piracicaba é uma ferramenta útil e prática para quem está em busca de informações precisas sobre o mercado imobiliário na região.
  Com sua metodologia baseada em dados e algoritmos de aprendizado de máquina, o Preditor oferece previsões precisas sobre o preço de mercado dos imóveis, auxiliando pessoas na compra ou venda de um imóvel em Piracicaba.
 
-## Reconhecimentos
-Esse é um projeto desenvolvido para a matéria de Inteligência Artificial I, do curso de Engenharia da Computação do Instituto Federal De São Paulo, unidade Piracicaba.
-Gostaria de agradecer ao professor Dr. Gustavo Voltani Von Atzingen, pela orientação e disponibilidade durante o desenvolvimento do projeto. 
-
 """)
 
