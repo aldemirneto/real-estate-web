@@ -28,4 +28,4 @@ sqlparse
 psycopg2-binary
 faiss-cpu
 pysqlite3-binary
-fiona == 1.9.6
+Fiona==1.9.4.post1
