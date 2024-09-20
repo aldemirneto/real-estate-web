@@ -99,7 +99,7 @@ def build_graph():
         },
     )
 
-    workflow.set_entry_point("RAG")
+    workflow.set_entry_point("SQL")
     chain = workflow.compile(checkpointer=memory)
 
     return chain
