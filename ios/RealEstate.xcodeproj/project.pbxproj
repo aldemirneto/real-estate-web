@@ -4,7 +4,7 @@
 000000000000000000000002 = {isa = PBXGroup; children = (000000000000000000000005, 000000000000000000000003); sourceTree = "<group>";};
 000000000000000000000003 = {isa = PBXGroup; children = (000000000000000000000006); name = Products; sourceTree = "<group>";};
 000000000000000000000004 = {isa = PBXNativeTarget; buildConfigurationList = 000000000000000000000015; buildPhases = (00000000000000000000000A, 00000000000000000000000B, 00000000000000000000000C); buildRules = (); dependencies = (); name = RealEstate; productName = RealEstate; productReference = 000000000000000000000006; productType = "com.apple.product-type.application";};
-000000000000000000000005 = {isa = PBXGroup; children = (000000000000000000000007, 000000000000000000000008, 000000000000000000000009, 00000000000000000000000D, 000000000000000000000020); path = RealEstate; sourceTree = "<group>";};
+000000000000000000000005 = {isa = PBXGroup; children = (000000000000000000000007, 000000000000000000000008, 000000000000000000000009, 00000000000000000000000D, 000000000000000000000020, 000000000000000000000022); path = RealEstate; sourceTree = "<group>";};
 000000000000000000000006 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RealEstate.app; sourceTree = BUILT_PRODUCTS_DIR;};
 000000000000000000000007 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RealEstateApp.swift"; sourceTree = "<group>";};
 000000000000000000000008 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Catalog.swift"; sourceTree = "<group>";};
@@ -15,7 +15,7 @@
 000000000000000000000010 = {isa = PBXBuildFile; fileRef = 000000000000000000000009;};
 00000000000000000000000A = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (00000000000000000000000E, 00000000000000000000000F); runOnlyForDeploymentPostprocessing = 0;};
 00000000000000000000000B = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;};
-00000000000000000000000C = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (000000000000000000000010, 000000000000000000000021); runOnlyForDeploymentPostprocessing = 0;};
+00000000000000000000000C = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (000000000000000000000010, 000000000000000000000021, 000000000000000000000023); runOnlyForDeploymentPostprocessing = 0;};
 000000000000000000000014 = {isa = XCConfigurationList; buildConfigurations = (000000000000000000000016, 000000000000000000000017); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
 000000000000000000000015 = {isa = XCConfigurationList; buildConfigurations = (000000000000000000000018, 000000000000000000000019); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
 000000000000000000000016 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SWIFT_VERSION = 5.0; }; name = Debug;};
@@ -24,4 +24,6 @@
 000000000000000000000019 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; INFOPLIST_FILE = RealEstate/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = com.aldemir.realestate; PRODUCT_NAME = "$(TARGET_NAME)"; TARGETED_DEVICE_FAMILY = "1,2"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_OPTIMIZATION_LEVEL = "-O"; }; name = Release;};
 000000000000000000000020 = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Resources/piracicaba.json"; sourceTree = "<group>";};
 000000000000000000000021 = {isa = PBXBuildFile; fileRef = 000000000000000000000020;};
+000000000000000000000022 = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Resources/sao-paulo.json"; sourceTree = "<group>";};
+000000000000000000000023 = {isa = PBXBuildFile; fileRef = 000000000000000000000022;};
 }; rootObject = 000000000000000000000001; }

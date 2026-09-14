@@ -340,7 +340,7 @@ struct NeighborhoodMapView: View {
         return price < 3000 ? .green : price < 4500 ? .orange : .red
     }
     private func loadShapes() {
-        guard let url = Bundle.main.url(forResource: "piracicaba", withExtension: "json"),
+        guard let url = Bundle.main.url(forResource: city == "Piracicaba" ? "piracicaba" : "sao-paulo", withExtension: "json"),
               let data = try? Data(contentsOf: url), let features = try? MKGeoJSONDecoder().decode(data) else { return }
         shapes = features.compactMap { $0 as? MKGeoJSONFeature }.flatMap { feature -> [NeighborhoodShape] in
             let metadata = feature.properties.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
@@ -358,7 +358,7 @@ struct NeighborhoodMapView: View {
                     Text("Piracicaba").tag("Piracicaba")
                     Text("São Paulo").tag("São Paulo")
                 }.pickerStyle(.segmented).padding()
-                if city == "Piracicaba" {
+                Group {
                     MapReader { proxy in
                         Map(position: $position) {
                             ForEach(shapes) { shape in
@@ -377,12 +377,15 @@ struct NeighborhoodMapView: View {
                     }.frame(minHeight: 260)
                     HStack(spacing: 12) {
                         legend("< 3 mil", .green); legend("3–4,5 mil", .orange)
-                        legend(">= 4,5 mil", .red); legend("Sem área", .gray)
+                        legend(">= 4,5 mil", .red); legend("Sem dados", .gray)
                     }.font(.caption2).padding(10)
                     Text("Preço médio por m² · toque em um bairro").font(.caption).foregroundStyle(.secondary)
-                } else {
-                    Text("Limites dos bairros de São Paulo ainda não disponíveis. Consulte os preços abaixo.")
-                        .font(.footnote).foregroundStyle(.secondary).padding(.horizontal)
+                }
+                if city == "São Paulo" {
+                    Text("Distritos oficiais · preços dos anúncios com o mesmo nome. Bairros menores ainda não estão associados aos distritos.")
+                        .font(.caption).foregroundStyle(.secondary).padding(.horizontal)
+                    Text("Fonte: Prefeitura de São Paulo / OpenUrbis · CC BY-SA 4.0")
+                        .font(.caption2).foregroundStyle(.secondary)
                 }
                 List {
                     if let name = selected { neighborhoodRow(name) }
@@ -394,7 +397,14 @@ struct NeighborhoodMapView: View {
                 }
             }.navigationTitle("Mapa de preços").navigationBarTitleDisplayMode(.inline)
                 .onAppear { if shapes.isEmpty { loadShapes() }; refreshPrices() }
-                .onChange(of: city) { _, _ in selected = nil; refreshPrices() }
+                .onChange(of: city) { _, _ in
+                    selected = nil; loadShapes(); refreshPrices()
+                    position = .region(MKCoordinateRegion(
+                        center: CLLocationCoordinate2D(latitude: city == "São Paulo" ? -23.5505 : -22.7253,
+                                                       longitude: city == "São Paulo" ? -46.6333 : -47.6476),
+                        span: MKCoordinateSpan(latitudeDelta: city == "São Paulo" ? 0.35 : 0.12,
+                                               longitudeDelta: city == "São Paulo" ? 0.35 : 0.12)))
+                }
                 .onReceive(store.$properties) { _ in refreshPrices() }
         }
     }
