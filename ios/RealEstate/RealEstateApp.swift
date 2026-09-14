@@ -22,14 +22,13 @@ struct CatalogView: View {
     let favoritesOnly: Bool
     @State private var city = "São Paulo"
     @State private var query = ""
-    @State private var bedrooms = 0
-    @State private var maxPrice = 0.0
+    @State private var filters = SearchFilters()
     @State private var showFilters = false
     private var cities: [String] { Array(Set(store.properties.map(\.cidade))).sorted() }
     private var results: [Property] {
         store.properties.filter { p in
             p.cidade == city && (!favoritesOnly || store.favorites.contains(p.id))
-            && (p.quartos ?? 0) >= bedrooms && (maxPrice == 0 || p.preco <= maxPrice)
+            && filters.matches(p)
             && (query.isEmpty || "\(p.neighborhood) \(p.tipo) \(p.imobiliaria)".localizedStandardContains(query))
         }.sorted { $0.preco < $1.preco }
     }
@@ -61,20 +60,155 @@ struct CatalogView: View {
             .navigationTitle(favoritesOnly ? "Favoritos" : "Imóveis")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $query, prompt: "Bairro, tipo ou imobiliária")
-            .toolbar { Button { showFilters = true } label: { Label("Filtros", systemImage: "slider.horizontal.3") } }
+            .toolbar { Button { showFilters = true } label: { Label(filters.count == 0 ? "Filtros" : "Filtros (\(filters.count))", systemImage: "slider.horizontal.3") } }
             .refreshable { await store.refresh(baseAddress: apiAddress) }
             .sheet(isPresented: $showFilters) {
-                NavigationStack {
-                    Form {
-                        Stepper("Pelo menos \(bedrooms) quartos", value: $bedrooms, in: 0...6)
-                        TextField("Preço máximo (0 = sem limite)", value: $maxPrice, format: .number).keyboardType(.decimalPad)
-                        Button("Limpar filtros") { bedrooms = 0; maxPrice = 0 }
-                    }.navigationTitle("Filtros")
-                    .toolbar { Button("Concluir") { showFilters = false } }
-                }.presentationDetents([.medium])
+                FiltersView(properties: store.properties.filter {
+                    $0.cidade == city && (!favoritesOnly || store.favorites.contains($0.id))
+                    && (query.isEmpty || "\($0.neighborhood) \($0.tipo) \($0.imobiliaria)".localizedStandardContains(query))
+                }, initial: filters) { filters = $0 }
             }
+            .onChange(of: city) { _, _ in filters.neighborhoods = [] }
             .onAppear { if !cities.contains(city), let first = cities.first { city = first } }
         }
+    }
+}
+
+struct SearchFilters: Equatable {
+    var neighborhoods: Set<String> = []
+    var types: Set<String> = []
+    var minPrice = ""
+    var maxPrice = ""
+    var bedrooms = 0
+    var parking = 0
+    static func money(_ value: String) -> Double? {
+        let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "R$", with: "").replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: ".", with: "").replacingOccurrences(of: ",", with: ".")
+        guard !value.isEmpty, let amount = Double(value), amount.isFinite, amount >= 0 else { return nil }
+        return amount
+    }
+    var error: String? {
+        if (!minPrice.isEmpty && Self.money(minPrice) == nil) || (!maxPrice.isEmpty && Self.money(maxPrice) == nil) {
+            return "Informe um preço válido, como 450.000 ou 450.000,50."
+        }
+        if let low = Self.money(minPrice), let high = Self.money(maxPrice), low > high {
+            return "O preço máximo deve ser maior ou igual ao mínimo."
+        }
+        return nil
+    }
+    var count: Int { [!neighborhoods.isEmpty, !types.isEmpty, !minPrice.isEmpty || !maxPrice.isEmpty, bedrooms > 0, parking > 0].filter { $0 }.count }
+    static func type(of property: Property) -> String {
+        property.tipo.components(separatedBy: " à ")[0].components(separatedBy: " para ")[0]
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    func matches(_ p: Property) -> Bool {
+        (neighborhoods.isEmpty || neighborhoods.contains(p.neighborhood))
+        && (types.isEmpty || types.contains(Self.type(of: p)))
+        && (Self.money(minPrice).map { p.preco >= $0 } ?? true)
+        && (Self.money(maxPrice).map { p.preco <= $0 } ?? true)
+        && (bedrooms == 0 || (p.quartos.map { $0 >= bedrooms } ?? false))
+        && (parking == 0 || (p.vagas.map { $0 >= parking } ?? false))
+    }
+}
+
+struct FiltersView: View {
+    @Environment(\.dismiss) private var dismiss
+    let properties: [Property]
+    let apply: (SearchFilters) -> Void
+    @State private var draft: SearchFilters
+    @FocusState private var priceFocused: Bool
+    init(properties: [Property], initial: SearchFilters, apply: @escaping (SearchFilters) -> Void) {
+        self.properties = properties
+        self.apply = apply
+        _draft = State(initialValue: initial)
+    }
+    private var neighborhoods: [String] { Array(Set(properties.map(\.neighborhood))).sorted() }
+    private var types: [String] { Array(Set(properties.map { SearchFilters.type(of: $0) })).sorted() }
+    private var total: Int { properties.filter { draft.matches($0) }.count }
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Localização") {
+                    NavigationLink {
+                        FilterSelection(title: "Bairros", options: neighborhoods, selection: $draft.neighborhoods)
+                    } label: {
+                        LabeledContent("Bairros", value: draft.neighborhoods.isEmpty ? "Todos" : "\(draft.neighborhoods.count) selecionados")
+                    }
+                }
+                Section("Tipo de imóvel") {
+                    NavigationLink {
+                        FilterSelection(title: "Tipos de imóvel", options: types, selection: $draft.types)
+                    } label: {
+                        LabeledContent("Tipos", value: draft.types.isEmpty ? "Todos" : draft.types.sorted().joined(separator: ", "))
+                    }
+                }
+                Section {
+                    HStack {
+                        Text("De R$").foregroundStyle(.secondary)
+                        TextField("Sem mínimo", text: $draft.minPrice).keyboardType(.decimalPad).focused($priceFocused)
+                    }
+                    HStack {
+                        Text("Até R$").foregroundStyle(.secondary)
+                        TextField("Sem máximo", text: $draft.maxPrice).keyboardType(.decimalPad).focused($priceFocused)
+                    }
+                    if let error = draft.error { Text(error).font(.footnote).foregroundStyle(.red) }
+                } header: { Text("Preço de compra") } footer: { Text("Deixe em branco para não limitar o preço.") }
+                Section("Características") {
+                    Text("Quartos (mínimo)").font(.subheadline)
+                    Picker("Quartos", selection: $draft.bedrooms) {
+                        Text("Todos").tag(0)
+                        ForEach(1...5, id: \.self) { Text("\($0)+").tag($0) }
+                    }.pickerStyle(.segmented)
+                    Text("Vagas (mínimo)").font(.subheadline)
+                    Picker("Vagas", selection: $draft.parking) {
+                        Text("Todos").tag(0)
+                        ForEach(1...3, id: \.self) { Text("\($0)+").tag($0) }
+                    }.pickerStyle(.segmented)
+                }
+            }
+            .navigationTitle("Filtros")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) { Button("Limpar") { draft = SearchFilters() } }
+                ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("OK") { priceFocused = false } }
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    priceFocused = false
+                    apply(draft)
+                    dismiss()
+                } label: {
+                    Text(total == 0 ? "Nenhum imóvel com esses filtros" : "Ver \(total) imóveis")
+                        .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 15)
+                }.buttonStyle(.borderedProminent).disabled(draft.error != nil || total == 0)
+                    .padding().background(.bar)
+            }
+        }
+    }
+}
+
+struct FilterSelection: View {
+    let title: String
+    let options: [String]
+    @Binding var selection: Set<String>
+    @State private var query = ""
+    var body: some View {
+        List {
+            Button("Todos") { selection = [] }
+            ForEach(options.filter { query.isEmpty || $0.localizedStandardContains(query) }, id: \.self) { option in
+                Button {
+                    if selection.contains(option) { selection.remove(option) } else { selection.insert(option) }
+                } label: {
+                    HStack {
+                        Text(option).foregroundStyle(.primary)
+                        Spacer()
+                        if selection.contains(option) { Image(systemName: "checkmark.circle.fill").foregroundStyle(.tint) }
+                    }.contentShape(Rectangle())
+                }
+            }
+        }.navigationTitle(title).searchable(text: $query, prompt: "Buscar")
     }
 }
 
