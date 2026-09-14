@@ -1,10 +1,11 @@
 import os
 
 from langchain_community.utilities import SQLDatabase
-from sqlalchemy import create_engine
 
-
-url = f'postgresql://postgres.{os.environ["DB_ID"]}:{os.environ["DB_PASSWORD"]}@aws-0-{os.environ["DB_REGION"]}.pooler.supabase.com:{os.environ["DB_PORT"]}/postgres'
+url = os.environ.get(
+    "DATABASE_URL",
+    "postgresql://postgres:postgres@db:5432/realestate"
+)
 
 db = SQLDatabase.from_uri(
     url,

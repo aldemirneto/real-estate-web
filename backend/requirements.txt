@@ -1,0 +1,9 @@
+fastapi[all]
+uvicorn[standard]
+pandas
+pyarrow
+xgboost
+scikit-learn
+orjson
+sqlalchemy
+psycopg2-binary
