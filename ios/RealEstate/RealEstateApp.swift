@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 @main
 struct RealEstateApp: App {
@@ -7,6 +8,7 @@ struct RealEstateApp: App {
         WindowGroup {
             TabView {
                 CatalogView(favoritesOnly: false).tabItem { Label("Explorar", systemImage: "building.2") }
+                NeighborhoodMapView().tabItem { Label("Mapa", systemImage: "map") }
                 CatalogView(favoritesOnly: true).tabItem { Label("Favoritos", systemImage: "heart") }
                 SettingsView().tabItem { Label("Ajustes", systemImage: "gearshape") }
             }
@@ -285,5 +287,132 @@ struct SettingsView: View {
                 if let message = store.message { Section { Text(message) } }
             }.navigationTitle("Ajustes")
         }
+    }
+}
+
+struct NeighborhoodShape: Identifiable {
+    let id: String
+    let name: String
+    let polygon: MKPolygon
+}
+
+struct NeighborhoodMapView: View {
+    @EnvironmentObject var store: CatalogStore
+    @State private var city = "Piracicaba"
+    @State private var selected: String?
+    @State private var shapes: [NeighborhoodShape] = []
+    @State private var prices: [String: Double] = [:]
+    @State private var position: MapCameraPosition = .region(MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: -22.7253, longitude: -47.6476),
+        span: MKCoordinateSpan(latitudeDelta: 0.12, longitudeDelta: 0.12)))
+    private var properties: [Property] { store.properties.filter { $0.cidade == city } }
+    private var neighborhoods: [String] { Array(Set(properties.map(\.neighborhood))).sorted() }
+    private func normalized(_ name: String) -> String {
+        name.replacingOccurrences(of: "_", with: " ").folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "pt_BR"))
+    }
+    private func rows(_ name: String) -> [Property] {
+        properties.filter { normalized($0.neighborhood) == normalized(name) }
+    }
+    private func meanM2(_ name: String) -> Double? { prices[normalized(name)] }
+    private func refreshPrices() {
+        // Match the web's sequential city-wide IQR filters for area and price.
+        func quantile(_ values: [Double], _ q: Double) -> Double {
+            let a = values.sorted(); let index = Double(a.count - 1) * q
+            let low = Int(index); let high = min(low + 1, a.count - 1)
+            return a[low] + (a[high] - a[low]) * (index - Double(low))
+        }
+        func trim(_ rows: [Property], value: (Property) -> Double) -> [Property] {
+            guard !rows.isEmpty else { return [] }
+            let values = rows.map(value), low = quantile(values, 0.25), high = quantile(values, 0.75)
+            let spread = 1.5 * (high - low)
+            return rows.filter { value($0) >= low - spread && value($0) <= high + spread }
+        }
+        var valid = properties.filter { $0.area.map { $0.isFinite && $0 > 0 } ?? false }
+        valid = trim(valid) { $0.area! }
+        valid = trim(valid) { $0.preco }
+        prices = Dictionary(grouping: valid, by: { normalized($0.neighborhood) }).compactMapValues { rows in
+            let values = rows.map { $0.preco / $0.area! }.filter { $0.isFinite }
+            return values.isEmpty ? nil : values.reduce(0, +) / Double(values.count)
+        }
+    }
+    private func color(_ name: String) -> Color {
+        guard let price = meanM2(name) else { return .gray }
+        return price < 3000 ? .green : price < 4500 ? .orange : .red
+    }
+    private func loadShapes() {
+        guard let url = Bundle.main.url(forResource: "piracicaba", withExtension: "json"),
+              let data = try? Data(contentsOf: url), let features = try? MKGeoJSONDecoder().decode(data) else { return }
+        shapes = features.compactMap { $0 as? MKGeoJSONFeature }.flatMap { feature -> [NeighborhoodShape] in
+            let metadata = feature.properties.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+            let name = metadata?["Name"] as? String ?? "Bairro"
+            return feature.geometry.enumerated().compactMap { index, geometry in
+                guard let polygon = geometry as? MKPolygon else { return nil }
+                return NeighborhoodShape(id: "\(name)-\(index)", name: name, polygon: polygon)
+            }
+        }
+    }
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                Picker("Cidade", selection: $city) {
+                    Text("Piracicaba").tag("Piracicaba")
+                    Text("São Paulo").tag("São Paulo")
+                }.pickerStyle(.segmented).padding()
+                if city == "Piracicaba" {
+                    MapReader { proxy in
+                        Map(position: $position) {
+                            ForEach(shapes) { shape in
+                                MapPolygon(shape.polygon).foregroundStyle(color(shape.name).opacity(0.45))
+                                    .stroke(selected == shape.name ? .black : .gray, lineWidth: selected == shape.name ? 3 : 1)
+                            }
+                        }.onTapGesture { point in
+                            guard let coordinate = proxy.convert(point, from: .local) else { return }
+                            let mapPoint = MKMapPoint(coordinate)
+                            selected = shapes.first { shape in
+                                let renderer = MKPolygonRenderer(polygon: shape.polygon)
+                                renderer.createPath()
+                                return renderer.path?.contains(renderer.point(for: mapPoint), using: .evenOdd) ?? false
+                            }?.name
+                        }
+                    }.frame(minHeight: 260)
+                    HStack(spacing: 12) {
+                        legend("< 3 mil", .green); legend("3–4,5 mil", .orange)
+                        legend(">= 4,5 mil", .red); legend("Sem área", .gray)
+                    }.font(.caption2).padding(10)
+                    Text("Preço médio por m² · toque em um bairro").font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("Limites dos bairros de São Paulo ainda não disponíveis. Consulte os preços abaixo.")
+                        .font(.footnote).foregroundStyle(.secondary).padding(.horizontal)
+                }
+                List {
+                    if let name = selected { neighborhoodRow(name) }
+                    Section("Preços por bairro") {
+                        ForEach(neighborhoods, id: \.self) { name in
+                            Button { selected = name } label: { neighborhoodRow(name) }.buttonStyle(.plain)
+                        }
+                    }
+                }
+            }.navigationTitle("Mapa de preços").navigationBarTitleDisplayMode(.inline)
+                .onAppear { if shapes.isEmpty { loadShapes() }; refreshPrices() }
+                .onChange(of: city) { _, _ in selected = nil; refreshPrices() }
+                .onReceive(store.$properties) { _ in refreshPrices() }
+        }
+    }
+    private func legend(_ label: String, _ color: Color) -> some View {
+        HStack(spacing: 3) { Circle().fill(color).frame(width: 7, height: 7); Text(label) }
+    }
+    private func neighborhoodRow(_ name: String) -> some View {
+        let data = rows(name)
+        return VStack(alignment: .leading, spacing: 5) {
+            Text(name).font(.headline)
+            if let price = meanM2(name) {
+                Text("\(price.formatted(.currency(code: "BRL").locale(Locale(identifier: "pt_BR"))))/m²").foregroundStyle(color(name))
+            } else { Text("Preço por m² indisponível").foregroundStyle(.secondary) }
+            if !data.isEmpty {
+                let average = data.map(\.preco).reduce(0, +) / Double(data.count)
+                Text("\(data.count) anúncios · preço médio \(average.formatted(.currency(code: "BRL").locale(Locale(identifier: "pt_BR"))))")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else { Text("Sem anúncios no catálogo atual").font(.caption).foregroundStyle(.secondary) }
+        }.padding(.vertical, 4)
     }
 }
